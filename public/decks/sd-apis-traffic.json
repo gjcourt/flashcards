@@ -30,7 +30,7 @@
     {
       "id": "status-5xx",
       "term": "HTTP 5xx server errors",
-      "definition": "500 Internal Server Error (unhandled). 502 Bad Gateway (upstream failed). 503 Service Unavailable (overloaded; retry-after). 504 Gateway Timeout (upstream slow). 5xx are retryable; 4xx mostly aren't.",
+      "definition": "500 Internal Server Error (unhandled). 502 Bad Gateway (upstream failed). 503 Service Unavailable (overloaded; Retry-After). 504 Gateway Timeout (upstream slow). 503 and 504 are clearly transient/retryable; 500 may not be (could be a deterministic bug). Most 4xx are permanent (don't retry).",
       "category": "rest"
     },
     {
