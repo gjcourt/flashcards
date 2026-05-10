@@ -35,8 +35,8 @@ describe('card-state round-trip', () => {
 
   it('persists ratings across simulated reload', () => {
     const fresh = materialise(deckJSON, t0)
-    const rated = rate(fresh.cards[0], Rating.Good, t0).card
-    const updated = { ...fresh, cards: [rated, fresh.cards[1]] }
+    const rated = rate(fresh.cards[0]!, Rating.Good, t0).card
+    const updated = { ...fresh, cards: [rated, fresh.cards[1]!] }
 
     saveCardStates(snapshotCardStates(updated))
 
@@ -44,18 +44,18 @@ describe('card-state round-trip', () => {
     const reloaded = materialise(deckJSON, t0)
     const restored = applyCardStates(reloaded, loadCardStates())
 
-    expect(restored.cards[0].reps).toBe(1)
-    expect(restored.cards[0].due.getTime()).toBe(rated.due.getTime())
-    expect(restored.cards[1].reps).toBe(0) // untouched card stays new
+    expect(restored.cards[0]!.reps).toBe(1)
+    expect(restored.cards[0]!.due.getTime()).toBe(rated.due.getTime())
+    expect(restored.cards[1]!.reps).toBe(0) // untouched card stays new
   })
 
   it('revives Date fields on read', () => {
     const fresh = materialise(deckJSON, t0)
-    const rated = rate(fresh.cards[0], Rating.Good, t0).card
+    const rated = rate(fresh.cards[0]!, Rating.Good, t0).card
     saveCardStates({ [rated.id]: stripContent(rated) })
     const states = loadCardStates()
-    expect(states[rated.id].due).toBeInstanceOf(Date)
-    expect(states[rated.id].last_review).toBeInstanceOf(Date)
+    expect(states[rated.id]!.due).toBeInstanceOf(Date)
+    expect(states[rated.id]!.last_review).toBeInstanceOf(Date)
   })
 
   it('falls back to {} on corrupt storage', () => {

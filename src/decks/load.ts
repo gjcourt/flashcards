@@ -92,9 +92,7 @@ export async function fetchDeck(entry: DeckManifestEntry): Promise<Deck> {
   const raw = await fetchJSON(entry.path)
   if (!isDeckJSON(raw)) throw new Error(`Invalid deck at ${entry.path}`)
   if (raw.id !== entry.id) {
-    throw new Error(
-      `Deck id mismatch: manifest says "${entry.id}" but file says "${raw.id}"`,
-    )
+    throw new Error(`Deck id mismatch: manifest says "${entry.id}" but file says "${raw.id}"`)
   }
   return materialise(raw)
 }

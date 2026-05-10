@@ -23,16 +23,16 @@ const json = {
 describe('materialise', () => {
   it('prefixes card ids with the deck id and stamps deckId', () => {
     const deck = materialise(json, t0)
-    expect(deck.cards[0].id).toBe('nato:a')
-    expect(deck.cards[0].deckId).toBe('nato')
-    expect(deck.cards[1].id).toBe('nato:b')
+    expect(deck.cards[0]!.id).toBe('nato:a')
+    expect(deck.cards[0]!.deckId).toBe('nato')
+    expect(deck.cards[1]!.id).toBe('nato:b')
   })
 
   it('preserves content fields', () => {
     const deck = materialise(json, t0)
-    expect(deck.cards[1].term).toBe('B')
-    expect(deck.cards[1].definition).toBe('Bravo')
-    expect(deck.cards[1].example).toBe('Bravo Romeo')
+    expect(deck.cards[1]!.term).toBe('B')
+    expect(deck.cards[1]!.definition).toBe('Bravo')
+    expect(deck.cards[1]!.example).toBe('Bravo Romeo')
   })
 
   it('initialises every card in New state with reps=0', () => {

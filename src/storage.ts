@@ -54,7 +54,7 @@ export function saveCollections(collections: Collection[]): void {
 }
 
 // Extract just the FSRS-related fields from a card.
-function fsrsOf(card: AppCard): CardFSRSFields {
+export function fsrsOf(card: AppCard): CardFSRSFields {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { id, deckId, term, definition, category, example, ...rest } = card
   return rest

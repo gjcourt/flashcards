@@ -1,9 +1,4 @@
-import {
-  createEmptyCard,
-  fsrs,
-  type Grade,
-  type ReviewLog,
-} from 'ts-fsrs'
+import { createEmptyCard, fsrs, type Grade, type ReviewLog } from 'ts-fsrs'
 import type { AppCard, CardContent } from './types'
 
 const scheduler = fsrs()
