@@ -3,7 +3,7 @@ import { Rating, State } from 'ts-fsrs'
 import { rate } from './fsrs'
 import { materialise } from './decks/load'
 import { fsrsOf } from './storage'
-import { masteryBreakdown, nextDueAt, streak } from './stats'
+import { describeRelative, masteryBreakdown, nextDueAt, streak } from './stats'
 
 const t0 = new Date('2026-01-01T12:00:00Z')
 
@@ -108,5 +108,37 @@ describe('nextDueAt', () => {
     const states = { [reviewed.id]: fsrsOf(reviewed) }
     const farFuture = new Date(reviewed.due.getTime() + 86_400_000 * 30)
     expect(nextDueAt(deck.cards, states, farFuture)).toBeNull()
+  })
+})
+
+describe('describeRelative', () => {
+  // Use a fixed `now` and offsets in ms so the results don't depend on the
+  // wall clock. RelativeTimeFormat output is locale-dependent — assert the
+  // unit + sign rather than exact wording.
+  const now = new Date('2026-01-01T12:00:00Z')
+
+  it('uses minutes for sub-hour deltas (the rounding-bug case)', () => {
+    // 31 minutes future used to round-up to "in 1 hour"; should be minutes.
+    const at = new Date(now.getTime() + 31 * 60_000)
+    const out = describeRelative(at, now)
+    expect(out).toMatch(/minute/)
+    expect(out).toMatch(/31/)
+  })
+
+  it('uses hours for hour-scale deltas', () => {
+    const at = new Date(now.getTime() + 3 * 3_600_000)
+    expect(describeRelative(at, now)).toMatch(/hour/)
+  })
+
+  it('uses days for day-scale deltas', () => {
+    const at = new Date(now.getTime() + 2 * 86_400_000)
+    expect(describeRelative(at, now)).toMatch(/day/)
+  })
+
+  it('handles past deltas (negative)', () => {
+    const at = new Date(now.getTime() - 5 * 60_000)
+    const out = describeRelative(at, now)
+    expect(out).toMatch(/minute/)
+    expect(out).toMatch(/5/)
   })
 })

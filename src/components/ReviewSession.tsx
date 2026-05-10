@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Rating } from 'ts-fsrs'
 import { useCardStates, useRateCard } from '../state'
 import { useDueQueue } from '../queue'
-import { nextDueAt } from '../stats'
+import { describeRelative, nextDueAt } from '../stats'
 import type { AppCard } from '../types'
 import { CardFlip } from './CardFlip'
 import { StatsPanel } from './StatsPanel'
@@ -21,21 +21,10 @@ const RATINGS = [
   { grade: Rating.Easy, label: 'Easy', key: '4', tone: 'bg-sky-600 hover:bg-sky-700' },
 ] as const
 
-const RELATIVE_TIME = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' })
 const ABSOLUTE_TIME = new Intl.DateTimeFormat(undefined, {
   dateStyle: 'medium',
   timeStyle: 'short',
 })
-
-function describeNextDue(at: Date, now: Date): string {
-  const ms = at.getTime() - now.getTime()
-  const minutes = Math.round(ms / 60_000)
-  const hours = Math.round(ms / 3_600_000)
-  const days = Math.round(ms / 86_400_000)
-  if (Math.abs(days) >= 1) return RELATIVE_TIME.format(days, 'day')
-  if (Math.abs(hours) >= 1) return RELATIVE_TIME.format(hours, 'hour')
-  return RELATIVE_TIME.format(minutes, 'minute')
-}
 
 export function ReviewSession({ cards, emptyHint, hideStats }: Props) {
   const cardStates = useCardStates()
@@ -55,7 +44,7 @@ export function ReviewSession({ cards, emptyHint, hideStats }: Props) {
           </p>
           {next && (
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-500">
-              Next card due {describeNextDue(next, now)} ·{' '}
+              Next card due {describeRelative(next, now)} ·{' '}
               <span className="text-slate-400 dark:text-slate-600">
                 {ABSOLUTE_TIME.format(next)}
               </span>

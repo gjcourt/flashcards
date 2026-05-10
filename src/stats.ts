@@ -78,3 +78,16 @@ export function nextDueAt(
   }
   return earliest === null ? null : new Date(earliest)
 }
+
+const RELATIVE_TIME = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' })
+
+// Localised "in X minutes / hours / days" string for the empty-state hint.
+// Picks the unit based on the *raw* delta so a 31-minute-future timestamp
+// reads "in 31 minutes", not "in 1 hour" (would happen if we rounded first).
+export function describeRelative(at: Date, now: Date = new Date()): string {
+  const ms = at.getTime() - now.getTime()
+  const absMs = Math.abs(ms)
+  if (absMs >= DAY_MS) return RELATIVE_TIME.format(Math.round(ms / DAY_MS), 'day')
+  if (absMs >= 3_600_000) return RELATIVE_TIME.format(Math.round(ms / 3_600_000), 'hour')
+  return RELATIVE_TIME.format(Math.round(ms / 60_000), 'minute')
+}
