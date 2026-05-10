@@ -1,0 +1,192 @@
+{
+  "id": "sd-fundamentals",
+  "name": "System Design — Fundamentals",
+  "description": "Interview framework, foundational concepts, vocabulary. The vocabulary every system-design conversation assumes.",
+  "cards": [
+    {
+      "id": "interview-structure",
+      "term": "System design interview structure",
+      "definition": "1) Requirements (5 min — functional, non-functional, out of scope) → 2) Estimation (3-5 min) → 3) API Design (3-5 min) → 4) High-level design (10 min) → 5) Deep dive on 2-3 hard problems (15-20 min) → 6) Bottlenecks & failure modes (5 min).",
+      "category": "interview",
+      "example": "Spend 2 min clarifying requirements before drawing — saves 10 min of rework."
+    },
+    {
+      "id": "key-habits",
+      "term": "Key habits in a system-design interview",
+      "definition": "State tradeoffs explicitly (don't just name a technology). Drive the conversation — propose, check in. Clarify before drawing. Use numbers — '10M DAU, 100 writes/sec' justifies sharding.",
+      "category": "interview"
+    },
+    {
+      "id": "atomicity",
+      "term": "ACID — Atomicity",
+      "definition": "A transaction fully succeeds or fully fails. No partial writes visible after a crash mid-transaction.",
+      "category": "consistency"
+    },
+    {
+      "id": "consistency-acid",
+      "term": "ACID — Consistency",
+      "definition": "Data always moves from one valid state to another. Constraints, foreign keys, and invariants are preserved across transactions.",
+      "category": "consistency"
+    },
+    {
+      "id": "isolation",
+      "term": "ACID — Isolation",
+      "definition": "Concurrent transactions don't interfere with each other. Implemented via locking or MVCC; tunable via isolation levels (read uncommitted → serializable).",
+      "category": "consistency"
+    },
+    {
+      "id": "durability",
+      "term": "ACID — Durability",
+      "definition": "Once a transaction is committed, the data survives crashes — typically by writing to a write-ahead log before acknowledging.",
+      "category": "consistency"
+    },
+    {
+      "id": "base",
+      "term": "BASE",
+      "definition": "Basically Available, Soft state, Eventually consistent. Trades consistency for availability and performance — appropriate for social-media likes, not bank balances.",
+      "category": "consistency",
+      "example": "Cassandra, DynamoDB default to BASE."
+    },
+    {
+      "id": "cap-theorem",
+      "term": "CAP theorem",
+      "definition": "During a network partition, a distributed system must choose between Consistency (every read sees the latest write) and Availability (every request gets a response). Partitions are inevitable, so the real choice is CP vs AP under partition.",
+      "category": "consistency"
+    },
+    {
+      "id": "pacelc",
+      "term": "PACELC",
+      "definition": "Extends CAP for normal operation: even without a Partition (P), there's a tradeoff between Latency (L) and Consistency (C). Reading from a local replica is faster but may be slightly stale.",
+      "category": "consistency",
+      "example": "Spanner = CP/EC. Cassandra = AP/EL. MongoDB default = CP/EL."
+    },
+    {
+      "id": "strong-consistency",
+      "term": "Strong consistency",
+      "definition": "Every read sees the most recent write; all clients see the same data at the same time. Costly — usually requires consensus or quorum reads (linearizable systems).",
+      "category": "consistency"
+    },
+    {
+      "id": "eventual-consistency",
+      "term": "Eventual consistency",
+      "definition": "Given no new updates, all replicas converge to the same value. Replicas may temporarily disagree. Acceptable for likes/cart totals/DNS; not for balances/inventory.",
+      "category": "consistency"
+    },
+    {
+      "id": "linearizability",
+      "term": "Linearizability",
+      "definition": "The strongest single-object consistency model: every operation appears to take effect atomically at some point between its start and end, in real-time order. What 'strongly consistent' usually means.",
+      "category": "consistency"
+    },
+    {
+      "id": "idempotency",
+      "term": "Idempotency",
+      "definition": "An operation produces the same result no matter how many times it runs. Critical for retry-on-failure systems. SET x=5 is idempotent; INCREMENT x is not. HTTP GET/PUT/DELETE are idempotent; POST is not.",
+      "category": "reliability"
+    },
+    {
+      "id": "idempotency-key",
+      "term": "Idempotency key",
+      "definition": "A unique key (UUID) the client sends with non-naturally-idempotent operations. Server stores (key, result); on retry, returns the cached result instead of re-executing. Prevents double-charges.",
+      "category": "reliability",
+      "example": "Stripe API: clients pass an Idempotency-Key header on payment creation."
+    },
+    {
+      "id": "stateless-services",
+      "term": "Stateless services",
+      "definition": "Servers hold no per-client state between requests; all state lives in DB/cache/external store. Any instance can handle any request → trivially horizontally scalable behind a load balancer.",
+      "category": "scaling"
+    },
+    {
+      "id": "horizontal-vs-vertical",
+      "term": "Horizontal vs vertical scaling",
+      "definition": "Vertical = bigger box (more CPU/RAM). Horizontal = more boxes. Vertical hits hardware ceilings and is a SPOF; horizontal scales further but needs the system to be stateless or partitioned.",
+      "category": "scaling"
+    },
+    {
+      "id": "spof",
+      "term": "Single Point of Failure (SPOF)",
+      "definition": "A component whose failure stops the entire system. The first thing to identify in a design review. Mitigations: redundancy, leader election with failover, multi-AZ deployment.",
+      "category": "reliability"
+    },
+    {
+      "id": "high-availability",
+      "term": "High availability",
+      "definition": "Designing for minimal downtime. Typically expressed in 9s: 99.9% = ~8.7h/yr, 99.99% = ~52 min/yr, 99.999% = ~5.3 min/yr. Each 9 is ~10× harder.",
+      "category": "reliability"
+    },
+    {
+      "id": "failover",
+      "term": "Failover",
+      "definition": "When the active instance dies, traffic is redirected to a standby. Active-passive: standby idles until promotion. Active-active: both serve traffic and the dead one is removed.",
+      "category": "reliability"
+    },
+    {
+      "id": "latency-vs-throughput",
+      "term": "Latency vs throughput",
+      "definition": "Latency = time to complete one request (p50/p95/p99). Throughput = requests per second. Optimizations often trade them: batching raises throughput at the cost of latency.",
+      "category": "performance"
+    },
+    {
+      "id": "tail-latency",
+      "term": "Tail latency",
+      "definition": "p99 / p99.9 latencies. With 100+ downstream calls per request, the worst-case becomes the typical-case — at fan-out 100 with p99=100ms, ~63% of requests see ≥100ms somewhere.",
+      "category": "performance"
+    },
+    {
+      "id": "wal",
+      "term": "Write-ahead log (WAL)",
+      "definition": "Before modifying data on disk, the change is appended to a sequential log. On crash, the log is replayed for durability. Cheap (sequential writes), enables async data-page flushing, and is the substrate for streaming replication.",
+      "category": "storage"
+    },
+    {
+      "id": "partitioning-vs-federation",
+      "term": "Partitioning vs federation",
+      "definition": "Partitioning (sharding): one logical dataset split across nodes serving the same app. Federation: different domains in different databases (users DB, orders DB, inventory DB). Federation removes cross-DB joins.",
+      "category": "scaling"
+    },
+    {
+      "id": "saga-vs-2pc",
+      "term": "Saga vs 2PC",
+      "definition": "2PC: coordinator locks all participants then commits/aborts globally. Strong consistency, blocking, coordinator is SPOF. Saga: sequence of local txns with compensating actions on failure. Eventually consistent, no locks, harder to reason about.",
+      "category": "consistency"
+    },
+    {
+      "id": "rw-quorum",
+      "term": "R + W > N quorum rule",
+      "definition": "In Dynamo-style replication with N replicas, choose write quorum W and read quorum R such that R + W > N. Then any read overlaps with the most recent write — latest data is always seen.",
+      "category": "consistency"
+    },
+    {
+      "id": "back-of-envelope",
+      "term": "Back-of-envelope estimation",
+      "definition": "Rough sizing in an interview: derive QPS from DAU × actions/day / 86,400; storage from records × size; bandwidth from QPS × payload. Round up to the next power of 10. Justifies design choices.",
+      "category": "interview",
+      "example": "10M DAU × 100 actions/day / 86400 ≈ 12k QPS average → design for ~25k peak."
+    },
+    {
+      "id": "cdn",
+      "term": "CDN",
+      "definition": "Content Delivery Network — edge nodes geographically close to users that cache static (and some dynamic) content from an origin. Reduces latency and origin load. Behavior controlled by HTTP cache headers.",
+      "category": "infrastructure"
+    },
+    {
+      "id": "load-balancer",
+      "term": "Load balancer",
+      "definition": "Distributes requests across backend instances. L4 (TCP) is faster but opaque to HTTP semantics; L7 (HTTP) can route by URL/header/cookie and do TLS termination. Common algorithms: round-robin, least-connections, consistent-hash.",
+      "category": "infrastructure"
+    },
+    {
+      "id": "bottleneck-checklist",
+      "term": "Common bottlenecks to check at the end",
+      "definition": "Database (writes hit a single primary?), single hot key (one user/object getting all traffic?), thundering herd on cache miss, network egress between regions, queue backups indicating downstream slowness, and any single coordinator (leader/dispatcher).",
+      "category": "interview"
+    },
+    {
+      "id": "10x-scale",
+      "term": "10× scale exercise",
+      "definition": "After the design works at the stated scale, ask 'what breaks at 10×?' Usually: a single DB primary, cache memory, a hot shard, a sync API call that needs to become async, or a coordinator that becomes a SPOF.",
+      "category": "interview"
+    }
+  ]
+}

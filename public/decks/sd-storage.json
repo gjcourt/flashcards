@@ -1,0 +1,217 @@
+{
+  "id": "sd-storage",
+  "name": "System Design — Storage & Caching",
+  "description": "Databases, indexes, sharding, replication, cache patterns, eviction, stampede mitigation, CDN headers.",
+  "cards": [
+    {
+      "id": "sql-when",
+      "term": "When to choose SQL",
+      "definition": "Relational data with stable schema, transactional integrity, complex queries with joins. ACID guarantees, mature tooling. Examples: financial records, order systems, anything with foreign-key relationships.",
+      "category": "databases"
+    },
+    {
+      "id": "nosql-document",
+      "term": "Document database (NoSQL)",
+      "definition": "Stores hierarchical/JSON-like documents. Flexible schema, good for nested data and content systems. Examples: MongoDB, CouchDB.",
+      "category": "databases"
+    },
+    {
+      "id": "nosql-kv",
+      "term": "Key-value store (NoSQL)",
+      "definition": "Fast lookups by exact key. Limited query flexibility (no range, no secondary index in many implementations). Examples: Redis, DynamoDB, etcd.",
+      "category": "databases"
+    },
+    {
+      "id": "nosql-wide-column",
+      "term": "Wide-column store (NoSQL)",
+      "definition": "Optimized for high write throughput across many nodes; rows have variable columns indexed by row key + column key. Strong with time-series and event data. Examples: Cassandra, HBase, ScyllaDB.",
+      "category": "databases"
+    },
+    {
+      "id": "nosql-graph",
+      "term": "Graph database (NoSQL)",
+      "definition": "Optimized for relationship traversal — friend-of-friend, recommendations, fraud rings. Examples: Neo4j, Neptune, JanusGraph.",
+      "category": "databases"
+    },
+    {
+      "id": "btree-index",
+      "term": "B-tree index",
+      "definition": "Default in most relational DBs. A balanced tree supporting equality and range queries efficiently. Updates rebalance in place; reads are O(log n). Good general-purpose.",
+      "category": "indexing"
+    },
+    {
+      "id": "lsm-tree",
+      "term": "LSM tree",
+      "definition": "Log-Structured Merge-tree. Writes go to an in-memory memtable, then are flushed and merged into sorted files on disk. Optimizes write throughput at the cost of read amplification. Used by Cassandra, RocksDB, LevelDB.",
+      "category": "indexing"
+    },
+    {
+      "id": "inverted-index",
+      "term": "Inverted index",
+      "definition": "Maps each term to the list of documents containing it. Foundation of full-text search engines (Elasticsearch, Lucene). 'rate limiter' → document IDs containing those terms.",
+      "category": "indexing"
+    },
+    {
+      "id": "range-sharding",
+      "term": "Range sharding",
+      "definition": "Assign rows by key range (user IDs 0–1M on shard 1, 1M–2M on shard 2). Simple, supports range queries. Risk: hot spots if data isn't evenly distributed (e.g. recent timestamps all on one shard).",
+      "category": "sharding"
+    },
+    {
+      "id": "hash-sharding",
+      "term": "Hash sharding",
+      "definition": "Apply hash(key) and assign by hash value. Distributes data evenly. Range queries are expensive (data is scattered). hash(key) % N is brittle to node count changes.",
+      "category": "sharding"
+    },
+    {
+      "id": "directory-sharding",
+      "term": "Directory-based sharding",
+      "definition": "A lookup service maintains key → shard mappings. Flexible, supports non-uniform distribution. Cost: the directory itself becomes a bottleneck and SPOF.",
+      "category": "sharding"
+    },
+    {
+      "id": "consistent-hashing",
+      "term": "Consistent hashing",
+      "definition": "Maps both nodes and keys onto a ring. A key is assigned to the first node clockwise. When a node is added/removed, only ~1/N keys are remapped (vs full remapping with hash%N). Used by DynamoDB, Cassandra, memcached.",
+      "category": "sharding"
+    },
+    {
+      "id": "leader-follower",
+      "term": "Leader-follower replication",
+      "definition": "All writes go to a single leader; followers replicate the WAL. Reads from leader (linearizable) or followers (stale). Simplest model. Bottleneck: leader writes; failover blocks writes. Examples: Postgres streaming replication, MySQL.",
+      "category": "replication"
+    },
+    {
+      "id": "multi-leader",
+      "term": "Multi-leader replication",
+      "definition": "Multiple leaders accept writes (often per-DC). Local writes are fast; cross-region replication is async. Hard part: conflict resolution — LWW, CRDTs, or manual merge. Used in active-active deployments.",
+      "category": "replication"
+    },
+    {
+      "id": "leaderless",
+      "term": "Leaderless replication (quorum)",
+      "definition": "Any node accepts writes; W of N must ack. Reads contact R nodes; with R+W>N, latest data is guaranteed. Conflicts via vector clocks + read-repair. Examples: Cassandra, DynamoDB, Riak.",
+      "category": "replication"
+    },
+    {
+      "id": "consensus-replicated",
+      "term": "Consensus-replicated DB",
+      "definition": "Every write goes through Raft/Paxos and is committed once a majority of nodes ack. Linearizable but writes are bound by quorum-RTT latency. Examples: etcd, CockroachDB, Spanner.",
+      "category": "replication"
+    },
+    {
+      "id": "cache-aside",
+      "term": "Cache-aside (lazy loading)",
+      "definition": "App checks cache; on miss, reads DB and populates cache. Writes: update DB then invalidate cache. Default choice; flexible. Trade: stale entries until TTL or invalidation.",
+      "category": "caching"
+    },
+    {
+      "id": "read-through",
+      "term": "Read-through cache",
+      "definition": "App talks only to the cache; cache fetches from DB on miss. Simpler app code, less control over the read path. Same staleness semantics as cache-aside.",
+      "category": "caching"
+    },
+    {
+      "id": "write-through",
+      "term": "Write-through cache",
+      "definition": "App writes to cache; cache writes synchronously to DB. Strong consistency at the cost of slower writes; cache must be up. Best for read-mostly workloads with consistency needs.",
+      "category": "caching"
+    },
+    {
+      "id": "write-behind",
+      "term": "Write-behind cache",
+      "definition": "App writes to cache; cache async-flushes to DB. Very high write throughput; data loss possible on cache crash. Best for tolerable-loss workloads (counters, metrics).",
+      "category": "caching"
+    },
+    {
+      "id": "lru",
+      "term": "LRU eviction",
+      "definition": "Evict the entry not accessed for longest. Matches temporal locality; cheap implementation (doubly-linked-list + hashmap). Weakness: a single full-scan can flush hot entries.",
+      "category": "caching"
+    },
+    {
+      "id": "lfu",
+      "term": "LFU eviction",
+      "definition": "Evict the entry with the lowest access count. Hot set survives scans. Weakness: stale entries with high historical counts keep 'winning'; implementation is complex.",
+      "category": "caching"
+    },
+    {
+      "id": "cache-stampede",
+      "term": "Cache stampede / thundering herd",
+      "definition": "When a popular cache entry expires, many requests miss simultaneously and all hit the DB. Mitigations: single-flight locking, probabilistic early expiration, background refresh (SWR), TTL jitter.",
+      "category": "caching"
+    },
+    {
+      "id": "single-flight",
+      "term": "Single-flight locking",
+      "definition": "Only one request fetches from DB on miss; others wait and reuse the result. Adds latency for waiters; needs distributed lock if cache is shared. Canonical Redis impl: atomic Lua check-and-set.",
+      "category": "caching"
+    },
+    {
+      "id": "ttl-jitter",
+      "term": "TTL jitter",
+      "definition": "Add random variance to cache TTLs so entries don't all expire at the same instant. Cheap defense against synchronized stampedes — useless if a single hot key is the problem.",
+      "category": "caching"
+    },
+    {
+      "id": "swr",
+      "term": "Stale-while-revalidate (SWR)",
+      "definition": "Background job refreshes entries before they expire; reads always hit the cache (sometimes serving slightly stale data) while a refresh runs. Eliminates miss latency at the cost of always-stale possibility.",
+      "category": "caching"
+    },
+    {
+      "id": "versioned-keys",
+      "term": "Versioned cache keys",
+      "definition": "Embed a version in the key (user:42:v3). Old entries expire naturally; no invalidation logic needed. Great for immutable assets and content addressable by hash.",
+      "category": "caching"
+    },
+    {
+      "id": "cdn-headers",
+      "term": "Cache-Control basics",
+      "definition": "max-age=N — cache for N seconds (browser + CDN). s-maxage=N — CDN-only TTL. no-store — never cache. private — browser-only, never CDN. Pair with ETag for conditional 304 revalidation.",
+      "category": "caching"
+    },
+    {
+      "id": "etag",
+      "term": "ETag",
+      "definition": "A fingerprint (hash) of the response body returned by the server. Clients send it back as If-None-Match; server returns 304 Not Modified (no body) if unchanged. Saves bandwidth without sacrificing freshness.",
+      "category": "caching"
+    },
+    {
+      "id": "cache-where",
+      "term": "Where to cache",
+      "definition": "Layered: client (in-memory, sub-ms, per-user) → CDN/edge (5-50 ms, global, static) → app in-process (sub-ms, per-instance) → distributed (Redis, ~1 ms, cluster-wide) → DB query cache. Combine layers for the right tradeoff.",
+      "category": "caching"
+    },
+    {
+      "id": "read-replicas",
+      "term": "Read replicas",
+      "definition": "Followers serving reads to scale read throughput beyond what the leader can handle. Reads may be slightly stale (replication lag). Don't use for read-your-writes consistency without sticky routing or follower-read fences.",
+      "category": "scaling"
+    },
+    {
+      "id": "cqrs",
+      "term": "CQRS",
+      "definition": "Command Query Responsibility Segregation — separate the model that handles writes from the model that serves reads. Lets each scale and be optimized independently. Often paired with event sourcing.",
+      "category": "scaling"
+    },
+    {
+      "id": "materialized-views",
+      "term": "Materialized views",
+      "definition": "Precomputed result of an expensive query, stored as a table. Read-time cheap, write-time refresh (eager, lazy, or scheduled). Trades freshness for read speed.",
+      "category": "scaling"
+    },
+    {
+      "id": "denormalization",
+      "term": "Denormalization for read performance",
+      "definition": "Duplicate or embed data to avoid joins on the read path. Faster reads; writes must update multiple places (more complex, risk of inconsistency). Common in NoSQL, often combined with async fan-out updates.",
+      "category": "scaling"
+    },
+    {
+      "id": "even-cluster-bad",
+      "term": "Why odd-numbered clusters",
+      "definition": "A 4-node cluster still requires 3 nodes for quorum (same as N=3) but adds a node that can fail. Even sizes don't improve fault tolerance — they just cost more. Run consensus clusters at N=3, 5, or 7.",
+      "category": "replication"
+    }
+  ]
+}

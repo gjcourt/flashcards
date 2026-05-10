@@ -1,0 +1,205 @@
+{
+  "id": "sd-distributed",
+  "name": "System Design — Distributed Systems",
+  "description": "The bedrock primitives: time, ordering, failure detection, leader election, quorums, consensus, gossip, idempotency, fencing, sagas.",
+  "cards": [
+    {
+      "id": "why-distributed-hard",
+      "term": "Why distributed is hard (3 facts)",
+      "definition": "1) Networks fail asymmetrically — packets dropped, delayed, duplicated, reordered. Can't tell 'slow' from 'dead'. 2) Clocks disagree even with NTP. 3) Partial failure is the default. Every distributed pattern is a workaround for one of these.",
+      "category": "primitives"
+    },
+    {
+      "id": "wall-clock-warning",
+      "term": "Wall clocks across machines",
+      "definition": "Never rely on wall-clock comparisons across machines for correctness. NTP keeps clocks within ~10-100 ms; clocks can also jump backward. The Cloudflare 2017 leap-second bug is the canonical incident.",
+      "category": "time"
+    },
+    {
+      "id": "lamport-clock",
+      "term": "Lamport clock",
+      "definition": "A counter per process. Local event: counter++. On send: attach counter. On receive(c): counter = max(counter, c) + 1. Guarantees: if a → b, then LC(a) < LC(b). Converse not true — smaller counter doesn't prove causal order.",
+      "category": "time"
+    },
+    {
+      "id": "vector-clock",
+      "term": "Vector clock",
+      "definition": "Each process maintains V[i] for every process i. Local event: V[me]++. On receive: for all i, V[i] = max(V[i], received V[i]); then V[me]++. Correctly distinguishes 'a happened before b', 'b before a', and 'concurrent'. Used in Dynamo to detect concurrent writes.",
+      "category": "time"
+    },
+    {
+      "id": "hlc",
+      "term": "Hybrid Logical Clock (HLC)",
+      "definition": "Wall-clock time + a logical counter. Sortable by physical time but tolerant of clock skew within a bounded window. Used by CockroachDB and YugabyteDB. Practical compromise between Lamport and Spanner's TrueTime.",
+      "category": "time"
+    },
+    {
+      "id": "failure-detector",
+      "term": "Failure detection is suspicion, not fact",
+      "definition": "You can never be sure a remote node is dead — only that you haven't heard from it. Every protocol must be safe even if a 'dead' node is actually slow and comes back. Detection time vs false positives is the core tradeoff.",
+      "category": "failures"
+    },
+    {
+      "id": "phi-accrual",
+      "term": "Phi-accrual failure detector",
+      "definition": "Builds a continuous suspicion score from heartbeat history (instead of binary alive/dead). Adapts to network jitter — a slow link doesn't trip false alarms. Used in Cassandra.",
+      "category": "failures"
+    },
+    {
+      "id": "gossip-protocol",
+      "term": "Gossip protocol",
+      "definition": "Each node periodically picks a few random peers and exchanges state. Information spreads exponentially: O(log N) rounds reach all nodes. Scales to thousands; eventually consistent. Used for membership in Cassandra, Consul, Serf.",
+      "category": "primitives"
+    },
+    {
+      "id": "leader-election-bully",
+      "term": "Bully algorithm",
+      "definition": "Highest-ID live node wins the election. Classic textbook protocol; rare in production because it's chatty and assumes synchronous communication.",
+      "category": "leader-election"
+    },
+    {
+      "id": "lease-based-leader",
+      "term": "Lease-based leader election",
+      "definition": "A node holds a time-limited lease (e.g. via etcd or ZooKeeper); it renews before expiry. If it can't renew, it stops acting as leader. Whoever grabs the lock next takes over. Used by Kubernetes leader-election and ZooKeeper.",
+      "category": "leader-election"
+    },
+    {
+      "id": "split-brain",
+      "term": "Split-brain",
+      "definition": "A network partition lets two nodes both believe they're the leader. Both accept writes; data diverges. Defenses: require quorum to elect (so both partitions can't both have a quorum) and use fencing tokens to reject stale-leader writes.",
+      "category": "leader-election"
+    },
+    {
+      "id": "fencing-token",
+      "term": "Fencing token",
+      "definition": "A monotonically increasing number issued with each lock grant. Downstream resources only accept writes with the highest token they've seen — rejecting writes from a process whose lease silently expired (GC pause, partition).",
+      "category": "leader-election"
+    },
+    {
+      "id": "quorum-definition",
+      "term": "Quorum",
+      "definition": "A subset of nodes large enough that any two quorums must overlap. Overlap guarantees that a value seen by one quorum is also seen by any subsequent quorum.",
+      "category": "quorums"
+    },
+    {
+      "id": "quorum-crash-stop",
+      "term": "Crash-stop quorum size",
+      "definition": "For N nodes, quorum = ⌊N/2⌋ + 1 (majority). Tolerates ⌊(N−1)/2⌋ failures. N=3 → quorum 2, tolerates 1. N=5 → quorum 3, tolerates 2. N=7 → quorum 4, tolerates 3.",
+      "category": "quorums"
+    },
+    {
+      "id": "quorum-byzantine",
+      "term": "Byzantine quorum",
+      "definition": "Tolerates nodes that lie or send corrupt data. Quorum = ⌊2N/3⌋ + 1; needs at least 3f+1 nodes to tolerate f Byzantine nodes. Most backend systems assume crash-stop; Byzantine-tolerant protocols (PBFT, HotStuff) appear in blockchains.",
+      "category": "quorums"
+    },
+    {
+      "id": "rw-quorum-config",
+      "term": "Common (W, R) configurations",
+      "definition": "W=N, R=1: strong reads, slow writes. W=1, R=N: fast writes, slow reads, still strong. W=⌈N/2⌉+1, R=⌈N/2⌉+1: balanced; survives ⌊(N−1)/2⌋ failures. Cassandra/DynamoDB expose W and R per query.",
+      "category": "quorums"
+    },
+    {
+      "id": "consensus",
+      "term": "Consensus problem",
+      "definition": "Get N nodes to agree on a single value (or sequence) despite failures. Foundation of replicated state machines, distributed locks, leader election. Solved by Paxos (1989, hard) and Raft (2014, designed to be understandable).",
+      "category": "consensus"
+    },
+    {
+      "id": "raft-overview",
+      "term": "Raft",
+      "definition": "Splits consensus into leader election, log replication, and safety. Leader takes all writes, replicates to followers; commit when a majority acks. On leader death, a new term begins and a new leader is elected. Used by etcd, Consul, CockroachDB.",
+      "category": "consensus"
+    },
+    {
+      "id": "flp-impossibility",
+      "term": "FLP impossibility",
+      "definition": "In an asynchronous system with even one faulty process, no deterministic protocol can guarantee consensus. Real systems work around this with timeouts (giving up on async perfection in exchange for liveness).",
+      "category": "consensus"
+    },
+    {
+      "id": "consensus-cost",
+      "term": "Consensus is expensive",
+      "definition": "Every write costs at least one quorum-RTT. Use it for the small set of decisions that must be globally agreed (cluster membership, config, lock grants). Don't run every business write through Raft — replicate state separately.",
+      "category": "consensus"
+    },
+    {
+      "id": "natural-idempotency",
+      "term": "Natural vs designed idempotency",
+      "definition": "Some operations are idempotent by nature: SET x=5 (vs INCREMENT x). HTTP PUT and DELETE are; POST is not. For non-natural ops (charge a payment), the client passes a unique idempotency key the server uses to dedupe retries.",
+      "category": "reliability"
+    },
+    {
+      "id": "idempotency-impl",
+      "term": "Idempotency key implementation",
+      "definition": "Store (idempotency_key, result) in the DB. On request, check existence — if present, return cached result; else execute, then store. Use a unique index on the key column to prevent races on concurrent retries.",
+      "category": "reliability"
+    },
+    {
+      "id": "optimistic-locking",
+      "term": "Optimistic locking",
+      "definition": "Read with a version number; on write, check the version hasn't changed (UPDATE ... WHERE id=? AND version=?). If it has, retry. No locks held; high throughput. Best when conflicts are rare.",
+      "category": "concurrency"
+    },
+    {
+      "id": "pessimistic-locking",
+      "term": "Pessimistic locking",
+      "definition": "Acquire a lock before reading; hold until commit. Other writers block. Prevents conflicts; reduces throughput; risks deadlocks. Best when conflicts are frequent or the cost of conflict is high.",
+      "category": "concurrency"
+    },
+    {
+      "id": "circuit-breaker-states",
+      "term": "Circuit breaker (3 states)",
+      "definition": "Closed: normal — calls flow through, failure rate tracked. Open: failure rate exceeded threshold — calls fail immediately for a cooldown. Half-open: timeout elapsed — let a test request through; success → close, failure → reopen.",
+      "category": "reliability"
+    },
+    {
+      "id": "circuit-breaker-why",
+      "term": "Why circuit breakers",
+      "definition": "When a downstream is failing, continuing to call it 1) wastes threads waiting on timeouts, 2) prolongs the downstream's outage, 3) cascades failures upstream. Failing fast contains the blast radius.",
+      "category": "reliability"
+    },
+    {
+      "id": "exponential-backoff",
+      "term": "Exponential backoff",
+      "definition": "Double the wait on each retry: 1s, 2s, 4s, 8s. Reduces load during an outage. Without jitter, all clients still synchronize and create waves on recovery.",
+      "category": "reliability"
+    },
+    {
+      "id": "jitter",
+      "term": "Jitter on retries",
+      "definition": "Add randomness to backoff intervals so retries spread across time, preventing synchronized waves on a recovering service. Standard recommendation for distributed clients (e.g. AWS SDK).",
+      "category": "reliability"
+    },
+    {
+      "id": "retry-only-transient",
+      "term": "Only retry transient errors",
+      "definition": "Network timeouts, 503s, 429s — yes. 400 Bad Request, 404 Not Found, 401 Unauthorized — no. Non-idempotent ops should only be retried with an idempotency key. Always set max retries + a deadline.",
+      "category": "reliability"
+    },
+    {
+      "id": "saga-choreography",
+      "term": "Saga — choreography",
+      "definition": "Each service publishes events; the next service subscribes and reacts. No central coordinator. Pros: low coupling, simple flows. Cons: hard to see overall state; complex flows fragment across services.",
+      "category": "consistency"
+    },
+    {
+      "id": "saga-orchestration",
+      "term": "Saga — orchestration",
+      "definition": "A central orchestrator drives the sequence — calls each service, waits for reply, calls compensations on failure. Single source of truth; better for complex/evolving flows. Tradeoff: orchestrator is a coupling hot spot.",
+      "category": "consistency"
+    },
+    {
+      "id": "two-phase-commit",
+      "term": "2PC drawbacks",
+      "definition": "Coordinator is a SPOF. Participants hold locks during 'prepare' (blocking other writers). If the coordinator crashes after prepare but before commit, participants block indefinitely waiting for resolution. Why most modern systems prefer sagas.",
+      "category": "consistency"
+    },
+    {
+      "id": "byzantine-failures",
+      "term": "Byzantine failures",
+      "definition": "Nodes don't just stop — they lie, send corrupt data, or behave maliciously. Most backend systems assume crash-stop (nodes fail by halting). Byzantine-tolerance is needed for blockchains and high-assurance systems.",
+      "category": "failures"
+    }
+  ]
+}

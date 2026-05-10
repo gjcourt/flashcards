@@ -23,6 +23,30 @@
       "name": "Tech Acronyms",
       "description": "Common acronyms across networking, web, security, data, and infrastructure.",
       "path": "decks/acronyms.json"
+    },
+    {
+      "id": "sd-fundamentals",
+      "name": "System Design — Fundamentals",
+      "description": "Interview framework, foundational concepts, vocabulary. The vocabulary every system-design conversation assumes.",
+      "path": "decks/sd-fundamentals.json"
+    },
+    {
+      "id": "sd-storage",
+      "name": "System Design — Storage & Caching",
+      "description": "Databases, indexes, sharding, replication, cache patterns, eviction, stampede mitigation, CDN headers.",
+      "path": "decks/sd-storage.json"
+    },
+    {
+      "id": "sd-distributed",
+      "name": "System Design — Distributed Systems",
+      "description": "Time, ordering, failure detection, leader election, quorums, consensus, gossip, idempotency, fencing, sagas.",
+      "path": "decks/sd-distributed.json"
+    },
+    {
+      "id": "sd-apis-traffic",
+      "name": "System Design — APIs, Traffic, Async, Observability",
+      "description": "REST/gRPC, HTTP semantics, rate-limiting algorithms, queues vs streams, delivery guarantees, observability pillars.",
+      "path": "decks/sd-apis-traffic.json"
     }
   ]
 }
