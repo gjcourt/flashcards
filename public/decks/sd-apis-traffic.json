@@ -66,7 +66,7 @@
     {
       "id": "idempotency-key-header",
       "term": "Idempotency-Key header",
-      "definition": "Client passes a unique key with non-idempotent requests (POST /payments). Server stores (key, response) and replays the response on retry. Standard for payment APIs (Stripe, etc.). See `idempotency-impl` in distributed deck.",
+      "definition": "Client passes a unique key with non-idempotent requests (POST /payments). Server stores (key, response) and replays the response on retry. Standard for payment APIs (Stripe, etc.). Server uses a unique index on the key column to prevent races on concurrent retries.",
       "category": "rest"
     },
     {
