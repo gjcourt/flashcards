@@ -70,11 +70,17 @@ function ActiveCard({ card, queueLength }: { card: AppCard; queueLength: number 
   const rateCard = useRateCard()
   const [flipped, setFlipped] = useState(false)
 
-  // Keyboard shortcuts: space toggles flip, 1/2/3/4 rates.
+  // Keyboard shortcuts: space toggles flip, 1/2/3/4 rates (only after flip).
+  // Note: keyboard extensions like Vimium swallow bare digit keypresses.
+  // If 1-4 don't fire, exclude this site in the extension's settings.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
       if (e.code === 'Space') {
+        // Skip when a button is focused: the browser synthesizes a click on
+        // Space for focused buttons, which already drives flip/rate via
+        // onClick. Handling it here too would double-fire.
+        if (e.target instanceof HTMLButtonElement) return
         e.preventDefault()
         setFlipped((f) => !f)
         return

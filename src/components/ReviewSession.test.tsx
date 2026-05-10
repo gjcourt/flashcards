@@ -60,4 +60,35 @@ describe('ReviewSession', () => {
     expect(screen.getByText(/all caught up/i)).toBeInTheDocument()
     expect(screen.getByText(/try the nato deck/i)).toBeInTheDocument()
   })
+
+  it('flips with the spacebar (Show answer button replaced by rating buttons)', () => {
+    renderSession()
+    expect(screen.getByRole('button', { name: /show answer/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /good/i })).not.toBeInTheDocument()
+    fireEvent.keyDown(window, { code: 'Space' })
+    expect(screen.queryByRole('button', { name: /show answer/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /good/i })).toBeInTheDocument()
+  })
+
+  it('rates after flipping via Space then digit key', () => {
+    renderSession()
+    fireEvent.keyDown(window, { code: 'Space' })
+    expect(screen.getByRole('button', { name: /good/i })).toBeInTheDocument()
+    // Press "3" (Good) → should advance to the next card.
+    fireEvent.keyDown(window, { key: '3' })
+    expect(screen.getByText('Two')).toBeInTheDocument()
+  })
+
+  it('does not double-toggle when Space fires with a button focused', () => {
+    renderSession()
+    const showAnswer = screen.getByRole('button', { name: /show answer/i })
+    showAnswer.focus()
+    // Dispatch keydown with the button as target — our handler should bail
+    // out (the browser would synthesize a click separately, which is the
+    // intended flip path).
+    fireEvent.keyDown(showAnswer, { code: 'Space' })
+    // Show answer is still present; no flip happened from the keydown handler.
+    expect(screen.getByRole('button', { name: /show answer/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /good/i })).not.toBeInTheDocument()
+  })
 })

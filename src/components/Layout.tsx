@@ -10,7 +10,10 @@ export function Layout() {
     <div className="flex min-h-screen flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <header className="border-b border-slate-200 dark:border-slate-800">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
-          <Link to={titleHref} className="text-lg font-semibold tracking-tight">
+          <Link
+            to={titleHref}
+            className="text-lg font-semibold tracking-tight hover:text-slate-600 dark:hover:text-slate-300"
+          >
             Flashcards
           </Link>
           {!LOCKED_DECK && (
