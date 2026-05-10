@@ -1,0 +1,13 @@
+node_modules
+dist
+dist-multi
+dist-nato
+.git
+.github
+.worktrees
+.vscode
+.idea
+.DS_Store
+coverage
+*.log
+README.md

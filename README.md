@@ -5,8 +5,13 @@ state lives in your browser's `localStorage`. Bundled decks cover financial term
 NATO phonetic alphabet, system-design latency numbers, and tech acronyms; you can also
 combine decks into reusable **collections** for focused study.
 
-- **Live (multi-deck):** https://burntbytes.com/flashcards/
-- **Live (NATO-locked):** https://burntbytes.com/flashcards/nato/
+- **Live (internal, multi-deck):** https://flashcards.burntbytes.com/
+- **Live (internal, NATO-locked):** https://flashcards.burntbytes.com/nato/
+
+Both served from a single nginx pod in the homelab cluster behind Cloudflare
+Access. Image published to `ghcr.io/gjcourt/flashcards`; manifests live in
+[gjcourt/homelab](https://github.com/gjcourt/homelab) under
+`apps/{base,production}/flashcards/`.
 
 Plan: [brainstorm/04-009](https://github.com/gjcourt/brainstorm/blob/main/04-finance-analysis/04-009-financial-terminology-flashcard-app.md)
 
@@ -32,6 +37,19 @@ npm run lint         # eslint
 npm run format       # prettier --write .
 npm run format:check # prettier --check .
 ```
+
+### Container
+
+`Dockerfile` is a two-stage build that produces both the multi-deck and the
+NATO-locked variants and serves them from `nginx-unprivileged`:
+
+```sh
+docker build -t flashcards:dev .
+docker run --rm -p 8080:8080 flashcards:dev   # http://localhost:8080
+```
+
+CI publishes a date-tagged image to `ghcr.io/gjcourt/flashcards` on every
+push to `main` (see `.github/workflows/image.yml`).
 
 ## Routes
 
@@ -146,12 +164,14 @@ Set `VITE_LOCKED_DECK=<deckId>` to produce a focused single-deck build:
 - The header nav (Review all, Manage) is hidden
 
 ```sh
-VITE_LOCKED_DECK=nato BASE_PATH=/flashcards/nato/ npm run build
+VITE_LOCKED_DECK=nato BASE_PATH=/nato/ npm run build
 ```
 
-The deployed [`burntbytes.com/flashcards/nato/`](https://burntbytes.com/flashcards/nato/)
-instance is built this way alongside the main multi-deck build — same code,
-different env vars, both shipped from the same `.github/workflows/deploy.yml`.
+The container image bakes both variants — multi-deck at `/` and NATO-locked
+at `/nato/` — so a single nginx pod serves
+[`flashcards.burntbytes.com/`](https://flashcards.burntbytes.com/) and
+[`flashcards.burntbytes.com/nato/`](https://flashcards.burntbytes.com/nato/).
+See `Dockerfile` for the two-stage build.
 
 ## Architecture
 
