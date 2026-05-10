@@ -10,7 +10,9 @@ import {
   useDeleteCollection,
   useRateCard,
   useResetProgress,
+  useReviews,
 } from './state'
+import { REVIEW_LOG_CAP } from './storage'
 import type { ReactNode } from 'react'
 
 const wrapper = ({ children }: { children: ReactNode }) => <StateProvider>{children}</StateProvider>
@@ -167,7 +169,7 @@ describe('StateProvider', () => {
     expect(result.current.list[0]?.deckIds).toEqual(['latency'])
   })
 
-  it('reset-progress clears card states but not collections', () => {
+  it('reset-progress clears card states + review log but not collections', () => {
     const deck = materialise(
       {
         id: 'd',
@@ -184,6 +186,7 @@ describe('StateProvider', () => {
         reset: useResetProgress(),
         states: useCardStates(),
         collections: useCollections(),
+        reviews: useReviews(),
       }),
       { wrapper },
     )
@@ -198,12 +201,73 @@ describe('StateProvider', () => {
     })
     expect(Object.keys(result.current.states)).toHaveLength(1)
     expect(result.current.collections).toHaveLength(1)
+    expect(result.current.reviews).toHaveLength(1)
 
     act(() => {
       result.current.reset()
     })
     expect(result.current.states).toEqual({})
+    expect(result.current.reviews).toEqual([])
     expect(result.current.collections).toHaveLength(1) // not wiped
+  })
+
+  it('records a review log entry on each rate and persists it', () => {
+    const deck = materialise(
+      {
+        id: 'd',
+        name: 'D',
+        description: '',
+        cards: [{ id: 'a', term: 'A', definition: 'a', category: 'x' }],
+      },
+      t0,
+    )
+    const { result } = renderHook(() => ({ rate: useRateCard(), reviews: useReviews() }), {
+      wrapper,
+    })
+    act(() => {
+      result.current.rate(deck.cards[0]!, Rating.Good, t0)
+      result.current.rate(deck.cards[0]!, Rating.Good, new Date(t0.getTime() + 60_000))
+    })
+    expect(result.current.reviews).toHaveLength(2)
+    expect(result.current.reviews[0]).toMatchObject({
+      cardId: 'd:a',
+      rating: Rating.Good,
+    })
+    const persisted = JSON.parse(localStorage.getItem('flashcards:reviews') ?? '[]')
+    expect(persisted).toHaveLength(2)
+  })
+
+  it('caps the review log at REVIEW_LOG_CAP entries (oldest dropped first)', () => {
+    // Pre-seed localStorage with cap+5 entries; init() will load all of them,
+    // and a single new RATE_CARD should trim back to the cap.
+    const seeded = Array.from({ length: REVIEW_LOG_CAP + 5 }, (_, i) => ({
+      cardId: `seed:${i}`,
+      ratedAt: t0.getTime() + i,
+      rating: Rating.Good,
+    }))
+    localStorage.setItem('flashcards:reviews', JSON.stringify(seeded))
+
+    const deck = materialise(
+      {
+        id: 'd',
+        name: 'D',
+        description: '',
+        cards: [{ id: 'a', term: 'A', definition: 'a', category: 'x' }],
+      },
+      t0,
+    )
+    const { result } = renderHook(() => ({ rate: useRateCard(), reviews: useReviews() }), {
+      wrapper,
+    })
+    expect(result.current.reviews).toHaveLength(REVIEW_LOG_CAP + 5)
+    act(() => {
+      result.current.rate(deck.cards[0]!, Rating.Good, new Date(t0.getTime() + 99_999))
+    })
+    expect(result.current.reviews).toHaveLength(REVIEW_LOG_CAP)
+    // Oldest seeded entries should have been dropped from the front.
+    expect(result.current.reviews[0]?.cardId).not.toBe('seed:0')
+    // Newest entry is the just-rated card.
+    expect(result.current.reviews.at(-1)?.cardId).toBe('d:a')
   })
 })
 
