@@ -16,30 +16,42 @@ import {
   fsrsOf,
   loadCardStates,
   loadCollections,
+  loadReviews,
+  REVIEW_LOG_CAP,
   saveCardStates,
   saveCollections,
+  saveReviews,
   type CardFSRSFields,
   type CardStateMap,
 } from './storage'
-import type { AppCard, Collection } from './types'
+import type { AppCard, Collection, ReviewLogEntry } from './types'
 
 type State = {
   cardStates: CardStateMap
   collections: Collection[]
+  reviews: ReviewLogEntry[]
 }
 
 type Action =
-  | { type: 'RATE_CARD'; cardId: string; fsrs: CardFSRSFields }
+  | { type: 'RATE_CARD'; cardId: string; fsrs: CardFSRSFields; entry: ReviewLogEntry }
   | { type: 'ADD_COLLECTION'; collection: Collection }
   | { type: 'DELETE_COLLECTION'; id: string }
   | { type: 'RESET_PROGRESS' }
 
 function reducer(s: State, a: Action): State {
   switch (a.type) {
-    case 'RATE_CARD':
-      return { ...s, cardStates: { ...s.cardStates, [a.cardId]: a.fsrs } }
+    case 'RATE_CARD': {
+      // Append to the review log, capped at REVIEW_LOG_CAP. Older entries
+      // drop off the front so storage can't grow unbounded.
+      const reviews = [...s.reviews, a.entry]
+      if (reviews.length > REVIEW_LOG_CAP) reviews.splice(0, reviews.length - REVIEW_LOG_CAP)
+      return {
+        ...s,
+        cardStates: { ...s.cardStates, [a.cardId]: a.fsrs },
+        reviews,
+      }
+    }
     case 'ADD_COLLECTION':
-      // Replace if the same id already exists; otherwise append.
       return {
         ...s,
         collections: [...s.collections.filter((c) => c.id !== a.collection.id), a.collection],
@@ -47,7 +59,7 @@ function reducer(s: State, a: Action): State {
     case 'DELETE_COLLECTION':
       return { ...s, collections: s.collections.filter((c) => c.id !== a.id) }
     case 'RESET_PROGRESS':
-      return { ...s, cardStates: {} }
+      return { ...s, cardStates: {}, reviews: [] }
     default: {
       const _exhaustive: never = a
       throw new Error(`Unhandled action: ${JSON.stringify(_exhaustive)}`)
@@ -59,7 +71,11 @@ function reducer(s: State, a: Action): State {
 // first reducer init so there is no asynchronous "empty then hydrated"
 // window where a user rating could be clobbered by a late hydrate.
 function init(): State {
-  return { cardStates: loadCardStates(), collections: loadCollections() }
+  return {
+    cardStates: loadCardStates(),
+    collections: loadCollections(),
+    reviews: loadReviews(),
+  }
 }
 
 const StateContext = createContext<{
@@ -74,6 +90,7 @@ export function StateProvider({ children }: { children: ReactNode }) {
   // init() don't need to be written back. Subsequent changes flow to disk.
   const skipCardsWrite = useRef(true)
   const skipCollectionsWrite = useRef(true)
+  const skipReviewsWrite = useRef(true)
 
   useEffect(() => {
     if (skipCardsWrite.current) {
@@ -90,6 +107,14 @@ export function StateProvider({ children }: { children: ReactNode }) {
     }
     saveCollections(state.collections)
   }, [state.collections])
+
+  useEffect(() => {
+    if (skipReviewsWrite.current) {
+      skipReviewsWrite.current = false
+      return
+    }
+    saveReviews(state.reviews)
+  }, [state.reviews])
 
   const value = useMemo(() => ({ state, dispatch }), [state])
   return <StateContext.Provider value={value}>{children}</StateContext.Provider>
@@ -109,12 +134,21 @@ export function useCollections(): Collection[] {
   return useStateContext().state.collections
 }
 
+export function useReviews(): ReviewLogEntry[] {
+  return useStateContext().state.reviews
+}
+
 export function useRateCard() {
   const { dispatch } = useStateContext()
   return useCallback(
     (card: AppCard, grade: Grade, now?: Date): AppCard => {
-      const { card: next } = rate(card, grade, now)
-      dispatch({ type: 'RATE_CARD', cardId: card.id, fsrs: fsrsOf(next) })
+      const { card: next, log } = rate(card, grade, now)
+      dispatch({
+        type: 'RATE_CARD',
+        cardId: card.id,
+        fsrs: fsrsOf(next),
+        entry: { cardId: card.id, ratedAt: log.review.getTime(), rating: log.rating },
+      })
       return next
     },
     [dispatch],
