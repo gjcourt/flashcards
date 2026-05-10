@@ -47,6 +47,12 @@
       "name": "System Design — APIs, Traffic, Async, Observability",
       "description": "REST/gRPC, HTTP semantics, rate-limiting algorithms, queues vs streams, delivery guarantees, observability pillars.",
       "path": "decks/sd-apis-traffic.json"
+    },
+    {
+      "id": "sd-estimation",
+      "name": "System Design — Estimation & Sizing",
+      "description": "Numbers and rules of thumb every system-design interview leans on. Throughput, storage units, time tricks, R:W ratios, capacity planning, ID space. Pairs with the Latency Numbers deck.",
+      "path": "decks/sd-estimation.json"
     }
   ]
 }

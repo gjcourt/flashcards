@@ -1,0 +1,219 @@
+{
+  "id": "sd-estimation",
+  "name": "System Design — Estimation & Sizing",
+  "description": "The numbers and rules of thumb every system-design interview leans on. Throughput, storage units, time tricks, R:W ratios, capacity planning, ID space. Pairs with the Latency Numbers deck.",
+  "cards": [
+    {
+      "id": "day-100k-seconds",
+      "term": "Seconds in a day (estimation trick)",
+      "definition": "86,400 — round to 100,000 for back-of-envelope work. Daily volume ÷ 100k ≈ average per-second rate. The single most useful unit-conversion shortcut in an interview.",
+      "category": "time",
+      "example": "1B reads/day ÷ 100k ≈ 10k reads/sec average."
+    },
+    {
+      "id": "month-year-seconds",
+      "term": "Seconds in a month / year",
+      "definition": "1 month ≈ 2.5M seconds. 1 year ≈ 31.5M (round to 30M). Useful for converting retention windows to byte budgets.",
+      "category": "time"
+    },
+    {
+      "id": "ascii-byte",
+      "term": "ASCII char size",
+      "definition": "1 byte. UTF-8 char is 1-4 bytes (BMP basic Latin = 1; emoji = 4). Useful for tweet/SMS/JSON-payload sizing.",
+      "category": "storage"
+    },
+    {
+      "id": "uuid-bytes",
+      "term": "UUID byte size",
+      "definition": "16 bytes raw (128 bits); 36 chars as hyphenated string; 22 chars as base64. Matters when an index column is huge × billions of rows.",
+      "category": "storage"
+    },
+    {
+      "id": "db-row-size",
+      "term": "Typical DB row size",
+      "definition": "100-1000 bytes for most app-tier tables. Tweets, comments, events ~300 B; profiles + several columns ~500-1000 B. Multiply by row count for storage estimates.",
+      "category": "storage"
+    },
+    {
+      "id": "photo-size",
+      "term": "Compressed profile photo",
+      "definition": "~200 KB. Useful for sizing image-storage workloads. Original-resolution JPEGs from a phone ~3-5 MB.",
+      "category": "storage"
+    },
+    {
+      "id": "hd-video-size",
+      "term": "1 hour of HD video",
+      "definition": "~1-2 GB. 1 minute ≈ 100 MB. Drives bandwidth and CDN cost estimates for video products.",
+      "category": "storage"
+    },
+    {
+      "id": "redis-throughput",
+      "term": "Single Redis instance throughput",
+      "definition": "~100k ops/sec for typical GET/SET workloads. A single 64 GB Redis instance handles most caching workloads — go distributed when working set exceeds a few hundred GB.",
+      "category": "throughput"
+    },
+    {
+      "id": "postgres-throughput",
+      "term": "Single Postgres throughput (simple reads)",
+      "definition": "~10-50k qps. Above that, add read replicas. When a single primary can't keep up with writes (or working set won't fit in RAM), shard.",
+      "category": "throughput"
+    },
+    {
+      "id": "kafka-throughput",
+      "term": "Single Kafka partition write throughput",
+      "definition": "~100 MB/sec. Scale by adding more partitions (one consumer per partition within a group). The partition is the unit of parallelism.",
+      "category": "throughput"
+    },
+    {
+      "id": "http-service-throughput",
+      "term": "Single HTTP service instance throughput",
+      "definition": "~10-50k rps for a typical Go/Java service with p99 <100 ms. A handy single-instance ceiling — drives 'how many app servers do I need?' answers.",
+      "category": "throughput"
+    },
+    {
+      "id": "gigabit-throughput",
+      "term": "Gigabit network capacity",
+      "definition": "~125 MB/sec (1 Gbps ÷ 8 bits/byte). Useful for checking whether bandwidth is your bottleneck before sharding for throughput. 10 GbE is ~1.25 GB/sec.",
+      "category": "throughput"
+    },
+    {
+      "id": "memory-vs-ssd-vs-disk",
+      "term": "Memory vs SSD vs disk hierarchy",
+      "definition": "RAM is ~1,000× faster than SSD; SSD is ~100× faster than spinning disk. Local network is ~1,000× faster than cross-region. Always state where the data lives — it dwarfs almost every other latency factor.",
+      "category": "intuition"
+    },
+    {
+      "id": "estimation-process",
+      "term": "5-step estimation process",
+      "definition": "1) Establish user scale (DAU). 2) Estimate request rate (QPS). 3) Separate reads from writes. 4) Estimate storage. 5) Estimate bandwidth. Each step's output drives a design decision; skipping one means an arbitrary choice.",
+      "category": "process"
+    },
+    {
+      "id": "dau-mau-ratio",
+      "term": "DAU/MAU ratio (typical)",
+      "definition": "20-40%. ~20% for social products (people don't visit every day); ~40% for utilities (banking, calendar). Lets you derive DAU from a published MAU number.",
+      "category": "process"
+    },
+    {
+      "id": "peak-factor",
+      "term": "Peak/average ratio",
+      "definition": "5-10× (use 10× as a safe default). A flat hourly average understates the peak hour by an order of magnitude — design for peak, not average, or you'll thrash at noon.",
+      "category": "process"
+    },
+    {
+      "id": "rps-formula",
+      "term": "Avg RPS formula",
+      "definition": "Avg RPS = (DAU × requests_per_user_per_day) ÷ 86,400. Peak RPS = Avg × peak_factor. Then split into read RPS and write RPS using the read:write ratio.",
+      "category": "process",
+      "example": "100M DAU × 10 req/day / 100k = 10k avg RPS → 50-100k peak."
+    },
+    {
+      "id": "storage-formula",
+      "term": "Storage estimation formula",
+      "definition": "Storage = writes/day × bytes/record × retention_days × replication_factor. Quote both raw and replicated numbers (3× is a common replication factor).",
+      "category": "process"
+    },
+    {
+      "id": "bandwidth-conversions",
+      "term": "Bandwidth conversions",
+      "definition": "1 KB/s ≈ 86.4 MB/day. 1 MB/s ≈ 86.4 GB/day. 1 GB/s ≈ 86.4 TB/day. Multiply per-second bandwidth by 86.4 for daily; use it the other way to size egress costs.",
+      "category": "process"
+    },
+    {
+      "id": "social-rw-ratio",
+      "term": "Social feed read:write ratio",
+      "definition": "~100:1. Drives heavy caching investment and read replicas. Write throughput rarely the bottleneck; the fan-out on read is.",
+      "category": "ratios"
+    },
+    {
+      "id": "search-rw-ratio",
+      "term": "Search read:write ratio",
+      "definition": "~1000:1. Index updates (writes) are rare relative to queries (reads). Justifies expensive index structures (inverted index, large in-memory caches).",
+      "category": "ratios"
+    },
+    {
+      "id": "messaging-rw-ratio",
+      "term": "Messaging read:write ratio",
+      "definition": "~1:1. Roughly every message sent is read once (or close to it). Symmetric design — neither read nor write side dominates.",
+      "category": "ratios"
+    },
+    {
+      "id": "analytics-rw-ratio",
+      "term": "Analytics ingestion read:write ratio",
+      "definition": "~1:100 (write-heavy). Events flow in continuously; queries are rare and aggregated. Justifies columnar stores (Parquet, ClickHouse) and async batch ingestion.",
+      "category": "ratios"
+    },
+    {
+      "id": "config-rw-ratio",
+      "term": "Config / feature flag read:write ratio",
+      "definition": "~10,000:1. Reads are constant background polls; writes are operator changes. Aggressive in-memory caching with versioned keys is the default.",
+      "category": "ratios"
+    },
+    {
+      "id": "service-instance-rule",
+      "term": "Rule of thumb: service instance capacity",
+      "definition": "A single well-tuned HTTP service instance handles ~10k rps. Divide your peak read RPS by ~10k to get a baseline instance count, round up generously for headroom + multi-AZ.",
+      "category": "rules-of-thumb"
+    },
+    {
+      "id": "read-replica-rule",
+      "term": "When to add a read replica",
+      "definition": "Add a replica every ~5-10× read scale. The first replica gives the biggest win (offloads ~half the read load). Beyond ~5 replicas, replication lag and connection sprawl start to hurt.",
+      "category": "rules-of-thumb"
+    },
+    {
+      "id": "shard-rule",
+      "term": "When to shard a database",
+      "definition": "When a single node can't hold the working set in RAM, OR can't keep up with writes. Sharding is expensive (cross-shard joins, rebalancing, hot keys) — defer until vertical scaling + replicas exhaust.",
+      "category": "rules-of-thumb"
+    },
+    {
+      "id": "hot-data-in-ram",
+      "term": "Hot dataset in RAM rule",
+      "definition": "Fit the hot dataset in RAM if at all possible — RAM access is 1,000× faster than SSD. If your working set exceeds a few hundred GB on one host, distributed cache or accept misses.",
+      "category": "rules-of-thumb"
+    },
+    {
+      "id": "id-space-formula",
+      "term": "ID space formula",
+      "definition": "n-char alphanumeric (62 chars: a-z, A-Z, 0-9) = 62^n combinations. n-char lowercase = 26^n. Drives the 'how short can our short URL be?' choice.",
+      "category": "id-space"
+    },
+    {
+      "id": "id-space-table",
+      "term": "ID lengths to remember",
+      "definition": "6 alphanumeric chars = ~56 billion (bit.ly scale). 8 chars = ~218 trillion. 10 chars = ~141 trillion lowercase-only (26¹⁰), up to ~8.4×10¹⁷ alphanumeric (62¹⁰). Long enough that random collision is statistically zero.",
+      "category": "id-space"
+    },
+    {
+      "id": "url-shortener-conclusions",
+      "term": "URL shortener — what the numbers tell you",
+      "definition": "100M DAU, 1% create / day, 5 clicks / day → 10 writes/sec, 5k reads/sec, ~1 TB over 5 years. Conclusions: 500:1 R:W → cache aggressively; trivial writes → single primary fine; 1 TB → no sharding yet.",
+      "category": "worked-examples"
+    },
+    {
+      "id": "presenting-assumptions",
+      "term": "State assumptions before calculating",
+      "definition": "Interviewers grade your reasoning, not your number. Write the assumptions on the board first ('100M DAU, 10% peak hour, 100B avg payload') so the calculation is auditable and the numbers are defensible.",
+      "category": "presentation"
+    },
+    {
+      "id": "presenting-rounding",
+      "term": "Round aggressively",
+      "definition": "Use 100k for 86,400. 1B for 987M. 30M for 31.5M. The estimate is a sanity check — precision adds noise without insight, and slows the conversation.",
+      "category": "presentation"
+    },
+    {
+      "id": "presenting-decisions",
+      "term": "Use estimates to drive decisions",
+      "definition": "Don't just produce a number — connect it to a design choice. 'Reads 500× writes → add a cache layer' beats 'I'll add Redis'. The number justifies the architecture; the architecture without the number is a guess.",
+      "category": "presentation"
+    },
+    {
+      "id": "sanity-check",
+      "term": "Sanity check the answer",
+      "definition": "Does the result match the system class you have in mind? 10 PB for a small app means you have an error. 100 GB for global Twitter means you have an error. Cross-check by working from the answer back to the assumptions.",
+      "category": "presentation"
+    }
+  ]
+}
