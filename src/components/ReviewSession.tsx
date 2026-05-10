@@ -77,6 +77,9 @@ function ActiveCard({ card, queueLength }: { card: AppCard; queueLength: number 
     function onKey(e: KeyboardEvent) {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
       if (e.code === 'Space') {
+        // Skip when a button is focused: the browser synthesizes a click on
+        // Space for focused buttons, which already drives flip/rate via
+        // onClick. Handling it here too would double-fire.
         if (e.target instanceof HTMLButtonElement) return
         e.preventDefault()
         setFlipped((f) => !f)

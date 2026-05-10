@@ -78,4 +78,17 @@ describe('ReviewSession', () => {
     fireEvent.keyDown(window, { key: '3' })
     expect(screen.getByText('Two')).toBeInTheDocument()
   })
+
+  it('does not double-toggle when Space fires with a button focused', () => {
+    renderSession()
+    const showAnswer = screen.getByRole('button', { name: /show answer/i })
+    showAnswer.focus()
+    // Dispatch keydown with the button as target — our handler should bail
+    // out (the browser would synthesize a click separately, which is the
+    // intended flip path).
+    fireEvent.keyDown(showAnswer, { code: 'Space' })
+    // Show answer is still present; no flip happened from the keydown handler.
+    expect(screen.getByRole('button', { name: /show answer/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /good/i })).not.toBeInTheDocument()
+  })
 })
