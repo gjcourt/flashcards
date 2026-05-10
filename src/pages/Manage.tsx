@@ -22,8 +22,10 @@ export function Manage() {
   const [error, setError] = useState<string | null>(null)
 
   const nextId = useMemo(() => slugify(name), [name])
-  const idTaken = collections.some((c) => c.id === nextId)
-  const canSubmit = name.trim().length > 0 && selected.size > 0 && !idTaken
+  const idTaken = nextId.length > 0 && collections.some((c) => c.id === nextId)
+  // nextId.length > 0 catches symbol-only names like "!!!" that trim non-empty
+  // but slugify down to "" — those would otherwise create a collection with id "".
+  const canSubmit = nextId.length > 0 && selected.size > 0 && !idTaken
 
   function toggleDeck(id: string) {
     setSelected((prev) => {
