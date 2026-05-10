@@ -24,7 +24,7 @@
     {
       "id": "vector-clock",
       "term": "Vector clock",
-      "definition": "Each process maintains V[i] for every process i. Local event: V[me]++. On receive: V[i] = max(V[i], received V[i]); then V[me]++. Correctly distinguishes 'a happened before b', 'b before a', and 'concurrent'. Used in Dynamo to detect concurrent writes.",
+      "definition": "Each process maintains V[i] for every process i. Local event: V[me]++. On receive: for all i, V[i] = max(V[i], received V[i]); then V[me]++. Correctly distinguishes 'a happened before b', 'b before a', and 'concurrent'. Used in Dynamo to detect concurrent writes.",
       "category": "time"
     },
     {

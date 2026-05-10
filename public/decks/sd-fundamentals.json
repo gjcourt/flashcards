@@ -155,7 +155,7 @@
       "id": "rw-quorum",
       "term": "R + W > N quorum rule",
       "definition": "In Dynamo-style replication with N replicas, choose write quorum W and read quorum R such that R + W > N. Then any read overlaps with the most recent write — latest data is always seen.",
-      "category": "distributed"
+      "category": "consistency"
     },
     {
       "id": "back-of-envelope",
