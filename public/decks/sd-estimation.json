@@ -182,7 +182,7 @@
     {
       "id": "id-space-table",
       "term": "ID lengths to remember",
-      "definition": "6 alphanumeric chars = ~56 billion (bit.ly scale). 8 chars = ~218 trillion. 10 chars = ~84 trillion (only with lowercase) up to 8.4×10¹⁷ alphanumeric. Long enough that random collision is statistically zero.",
+      "definition": "6 alphanumeric chars = ~56 billion (bit.ly scale). 8 chars = ~218 trillion. 10 chars = ~141 trillion lowercase-only (26¹⁰), up to ~8.4×10¹⁷ alphanumeric (62¹⁰). Long enough that random collision is statistically zero.",
       "category": "id-space"
     },
     {
