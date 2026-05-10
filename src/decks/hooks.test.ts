@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
-import { resetManifestCache, useDeck, useManifest } from './hooks'
+import { resetManifestCache, useDeck, useDecks, useManifest } from './hooks'
 
 const manifest = {
   decks: [
@@ -9,6 +9,12 @@ const manifest = {
       name: 'Tiny',
       description: 'Just a couple cards.',
       path: 'decks/tiny.json',
+    },
+    {
+      id: 'small',
+      name: 'Small',
+      description: 'A few more.',
+      path: 'decks/small.json',
     },
   ],
 }
@@ -21,6 +27,13 @@ const tinyDeck = {
     { id: 'one', term: 'One', definition: 'First', category: 'x' },
     { id: 'two', term: 'Two', definition: 'Second', category: 'x' },
   ],
+}
+
+const smallDeck = {
+  id: 'small',
+  name: 'Small',
+  description: 'A few more.',
+  cards: [{ id: 'alpha', term: 'A', definition: 'Alfa', category: 'letters' }],
 }
 
 function jsonResponse(body: unknown): Response {
@@ -38,6 +51,7 @@ beforeEach(() => {
       const url = String(input)
       if (url.endsWith('decks/manifest.json')) return jsonResponse(manifest)
       if (url.endsWith('decks/tiny.json')) return jsonResponse(tinyDeck)
+      if (url.endsWith('decks/small.json')) return jsonResponse(smallDeck)
       return new Response('not found', { status: 404 })
     }),
   )
@@ -55,7 +69,7 @@ describe('useManifest', () => {
     await waitFor(() => {
       expect(result.current.status).toBe('ready')
     })
-    expect(result.current.data?.decks).toHaveLength(1)
+    expect(result.current.data?.decks).toHaveLength(2)
     expect(result.current.data?.decks[0]?.id).toBe('tiny')
   })
 })
@@ -84,5 +98,72 @@ describe('useDeck', () => {
       expect(result.current.status).toBe('error')
     })
     expect(result.current.error?.message).toMatch(/not found/i)
+  })
+})
+
+describe('useDecks', () => {
+  it('loads multiple decks for a collection', async () => {
+    const { result } = renderHook(() => useDecks(['tiny', 'small']))
+    await waitFor(() => {
+      expect(result.current.status).toBe('ready')
+    })
+    const decks = result.current.data!
+    expect(decks).toHaveLength(2)
+    expect(decks.flatMap((d) => d.cards.map((c) => c.id))).toEqual([
+      'tiny:one',
+      'tiny:two',
+      'small:alpha',
+    ])
+  })
+
+  it('loads every deck when ids is null (the /all route case)', async () => {
+    const { result } = renderHook(() => useDecks(null))
+    await waitFor(() => {
+      expect(result.current.status).toBe('ready')
+    })
+    expect(result.current.data?.map((d) => d.id)).toEqual(['tiny', 'small'])
+  })
+
+  it('errors when any requested deck id is missing from the manifest', async () => {
+    const { result } = renderHook(() => useDecks(['tiny', 'ghost']))
+    await waitFor(() => {
+      expect(result.current.status).toBe('error')
+    })
+    expect(result.current.error?.message).toMatch(/ghost/)
+  })
+
+  it('preserves caller-specified deck order regardless of manifest order', async () => {
+    // Manifest order is [tiny, small]; ask for them backwards.
+    const { result } = renderHook(() => useDecks(['small', 'tiny']))
+    await waitFor(() => {
+      expect(result.current.status).toBe('ready')
+    })
+    expect(result.current.data?.map((d) => d.id)).toEqual(['small', 'tiny'])
+  })
+
+  it('returns an empty array when ids is []', async () => {
+    const { result } = renderHook(() => useDecks([]))
+    await waitFor(() => {
+      expect(result.current.status).toBe('ready')
+    })
+    expect(result.current.data).toEqual([])
+  })
+
+  it('does not refetch when ids array identity changes but contents do not', async () => {
+    const fetchSpy = vi.mocked(globalThis.fetch as never) as ReturnType<typeof vi.fn>
+    const { result, rerender } = renderHook(({ ids }: { ids: string[] }) => useDecks(ids), {
+      initialProps: { ids: ['tiny'] },
+    })
+    await waitFor(() => {
+      expect(result.current.status).toBe('ready')
+    })
+    const callsAfterFirstLoad = fetchSpy.mock.calls.length
+
+    // New array with the same content — should NOT refetch.
+    rerender({ ids: ['tiny'] })
+    await waitFor(() => {
+      expect(result.current.status).toBe('ready')
+    })
+    expect(fetchSpy.mock.calls.length).toBe(callsAfterFirstLoad)
   })
 })

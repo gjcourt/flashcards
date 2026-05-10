@@ -1,9 +1,12 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { Layout } from './components/Layout'
-import { Home } from './pages/Home'
+import { AllReview } from './pages/AllReview'
+import { CollectionReview } from './pages/CollectionReview'
 import { DeckReview } from './pages/DeckReview'
 import { DeckCards } from './pages/DeckCards'
 import { ErrorPage } from './pages/ErrorPage'
+import { Home } from './pages/Home'
+import { Manage } from './pages/Manage'
 import { NotFound } from './pages/NotFound'
 
 const router = createBrowserRouter(
@@ -20,6 +23,9 @@ const router = createBrowserRouter(
             { index: true, element: <Home /> },
             { path: 'decks/:id', element: <DeckReview /> },
             { path: 'decks/:id/cards', element: <DeckCards /> },
+            { path: 'collections/:id', element: <CollectionReview /> },
+            { path: 'all', element: <AllReview /> },
+            { path: 'manage', element: <Manage /> },
             { path: '*', element: <NotFound /> },
           ],
         },
