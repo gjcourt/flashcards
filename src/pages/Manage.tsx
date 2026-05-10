@@ -139,7 +139,11 @@ export function Manage() {
             )}
           </div>
 
-          {error && <p className="text-sm text-rose-600 dark:text-rose-400">{error}</p>}
+          {error && (
+            <p role="alert" aria-live="polite" className="text-sm text-rose-600 dark:text-rose-400">
+              {error}
+            </p>
+          )}
 
           <button
             type="submit"

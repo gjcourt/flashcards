@@ -74,26 +74,30 @@ export function useDeck(id: string | undefined): Async<Deck> {
 }
 
 // Load multiple decks at once. Used by the collection-review and /all routes.
-// Pass an empty array (or omit ids on /all) to load every deck in the manifest.
-// Returns a stable list ordered to match the input ids when supplied; otherwise
-// follows manifest order.
+// Pass `null` to load every deck in the manifest (the /all route case).
+//
+// Returned decks preserve the *input* order when `ids` is supplied — manifest
+// order is not relied on by callers.
 export function useDecks(ids: string[] | null): Async<Deck[]> {
   const [s, set] = useState<Async<Deck[]>>(loading)
   // Stable cache key so changing array identity (but same contents) doesn't
-  // refetch.
-  const idKey = ids === null ? '*' : [...ids].sort().join(',')
+  // retrigger the effect. The raw `ids` array is NOT in the deps array — the
+  // key is the source of truth for "did the request actually change".
+  const idKey = ids === null ? '*' : ids.join(',')
   useEffect(() => {
     let cancelled = false
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reset on input change
     set(loading)
     getManifest()
       .then((m) => {
-        const wanted = ids === null ? m.decks : m.decks.filter((e) => ids.includes(e.id))
-        if (ids !== null && wanted.length !== ids.length) {
-          const missing = ids.filter((id) => !m.decks.some((e) => e.id === id))
+        if (ids === null) return Promise.all(m.decks.map(fetchDeck))
+        const byId = new Map(m.decks.map((e) => [e.id, e]))
+        const missing = ids.filter((id) => !byId.has(id))
+        if (missing.length > 0) {
           throw new Error(`Deck(s) not found: ${missing.join(', ')}`)
         }
-        return Promise.all(wanted.map(fetchDeck))
+        // Preserve input order so callers can rely on it.
+        return Promise.all(ids.map((id) => fetchDeck(byId.get(id)!)))
       })
       .then((data) => {
         if (!cancelled) set({ status: 'ready', data, error: null })
@@ -104,6 +108,8 @@ export function useDecks(ids: string[] | null): Async<Deck[]> {
     return () => {
       cancelled = true
     }
-  }, [idKey, ids])
+    // idKey covers both "different ids" and "same ids in different order".
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- idKey supersedes ids
+  }, [idKey])
   return s
 }

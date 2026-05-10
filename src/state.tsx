@@ -121,6 +121,10 @@ export function useRateCard() {
   )
 }
 
+/**
+ * Add a collection. **Overwrites** any existing collection with the same id.
+ * Callers are expected to enforce id uniqueness in UI (see Manage's idTaken check).
+ */
 export function useAddCollection() {
   const { dispatch } = useStateContext()
   return useCallback(

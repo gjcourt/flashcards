@@ -45,8 +45,23 @@ export function saveCardStates(states: CardStateMap): void {
   write(KEY_CARDS, states)
 }
 
+function isCollection(v: unknown): v is Collection {
+  if (!v || typeof v !== 'object') return false
+  const c = v as Record<string, unknown>
+  return (
+    typeof c.id === 'string' &&
+    typeof c.name === 'string' &&
+    Array.isArray(c.deckIds) &&
+    c.deckIds.every((d) => typeof d === 'string') &&
+    typeof c.createdAt === 'number'
+  )
+}
+
 export function loadCollections(): Collection[] {
-  return read<Collection[]>(KEY_COLLECTIONS, [], Array.isArray)
+  // Validate the array, then drop any malformed entries rather than failing
+  // the entire load — preserves valid user data when one entry has drifted.
+  const raw = read<unknown[]>(KEY_COLLECTIONS, [], Array.isArray)
+  return raw.filter(isCollection)
 }
 
 export function saveCollections(collections: Collection[]): void {

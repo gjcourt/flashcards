@@ -131,4 +131,31 @@ describe('useDecks', () => {
     })
     expect(result.current.error?.message).toMatch(/ghost/)
   })
+
+  it('preserves caller-specified deck order regardless of manifest order', async () => {
+    // Manifest order is [tiny, small]; ask for them backwards.
+    const { result } = renderHook(() => useDecks(['small', 'tiny']))
+    await waitFor(() => {
+      expect(result.current.status).toBe('ready')
+    })
+    expect(result.current.data?.map((d) => d.id)).toEqual(['small', 'tiny'])
+  })
+
+  it('does not refetch when ids array identity changes but contents do not', async () => {
+    const fetchSpy = vi.mocked(globalThis.fetch as never) as ReturnType<typeof vi.fn>
+    const { result, rerender } = renderHook(({ ids }: { ids: string[] }) => useDecks(ids), {
+      initialProps: { ids: ['tiny'] },
+    })
+    await waitFor(() => {
+      expect(result.current.status).toBe('ready')
+    })
+    const callsAfterFirstLoad = fetchSpy.mock.calls.length
+
+    // New array with the same content — should NOT refetch.
+    rerender({ ids: ['tiny'] })
+    await waitFor(() => {
+      expect(result.current.status).toBe('ready')
+    })
+    expect(fetchSpy.mock.calls.length).toBe(callsAfterFirstLoad)
+  })
 })

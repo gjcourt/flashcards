@@ -1,47 +1,27 @@
-import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { fetchAllDecks } from '../decks/load'
-import { useManifest } from '../decks/hooks'
+import { useDecks, useManifest } from '../decks/hooks'
 import { useCardStates, useCollections } from '../state'
 import { buildDueQueue } from '../queue'
 import { DeckTile } from '../components/DeckTile'
-import type { Deck } from '../types'
 
 export function Home() {
   const manifest = useManifest()
+  const decks = useDecks(null) // every deck — used for due counts and total cards
   const cardStates = useCardStates()
   const collections = useCollections()
-  const [decks, setDecks] = useState<Deck[] | null>(null)
-  const [error, setError] = useState<Error | null>(null)
 
-  // Fetch all decks once so we can show due-counts on tiles AND on collections.
-  useEffect(() => {
-    let cancelled = false
-    fetchAllDecks()
-      .then((d) => {
-        if (!cancelled) setDecks(d)
-      })
-      .catch((e: unknown) => {
-        if (!cancelled) setError(e as Error)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  if (manifest.status === 'loading' || (!decks && !error)) {
+  if (manifest.status === 'loading' || decks.status === 'loading') {
     return <p className="text-slate-500">Loading…</p>
   }
-  if (manifest.status === 'error' || error) {
-    const e = manifest.status === 'error' ? manifest.error : error
-    return (
-      <p className="text-rose-600 dark:text-rose-400">
-        Failed to load decks: {e?.message ?? 'unknown error'}
-      </p>
-    )
+  if (manifest.status === 'error' || decks.status === 'error') {
+    const err =
+      manifest.status === 'error'
+        ? manifest.error
+        : (decks as { status: 'error'; error: Error }).error
+    return <p className="text-rose-600 dark:text-rose-400">Failed to load decks: {err.message}</p>
   }
 
-  const decksById = new Map(decks!.map((d) => [d.id, d]))
+  const decksById = new Map(decks.data.map((d) => [d.id, d]))
   const now = new Date()
 
   function dueAcross(deckIds: readonly string[]): number {
@@ -52,7 +32,7 @@ export function Home() {
   }
 
   const allDueCount = dueAcross(manifest.data.decks.map((e) => e.id))
-  const totalCards = decks!.reduce((sum, d) => sum + d.cards.length, 0)
+  const totalCards = decks.data.reduce((sum, d) => sum + d.cards.length, 0)
 
   return (
     <div className="space-y-10">

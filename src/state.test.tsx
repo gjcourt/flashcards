@@ -97,6 +97,44 @@ describe('StateProvider', () => {
     expect(result.current.list).toEqual([])
   })
 
+  it('persists collection mutations to localStorage', () => {
+    const { result } = renderHook(() => ({ add: useAddCollection(), del: useDeleteCollection() }), {
+      wrapper,
+    })
+    act(() => {
+      result.current.add({
+        id: 'iv',
+        name: 'Interview',
+        deckIds: ['nato'],
+        createdAt: t0.getTime(),
+      })
+    })
+    const stored = JSON.parse(localStorage.getItem('flashcards:collections') ?? '[]')
+    expect(stored).toHaveLength(1)
+    expect(stored[0].id).toBe('iv')
+
+    act(() => {
+      result.current.del('iv')
+    })
+    const cleared = JSON.parse(localStorage.getItem('flashcards:collections') ?? '[]')
+    expect(cleared).toEqual([])
+  })
+
+  it('add with same id replaces (does not duplicate)', () => {
+    const { result } = renderHook(() => ({ add: useAddCollection(), list: useCollections() }), {
+      wrapper,
+    })
+    act(() => {
+      result.current.add({ id: 'x', name: 'First', deckIds: ['nato'], createdAt: 1 })
+    })
+    act(() => {
+      result.current.add({ id: 'x', name: 'Second', deckIds: ['latency'], createdAt: 2 })
+    })
+    expect(result.current.list).toHaveLength(1)
+    expect(result.current.list[0]?.name).toBe('Second')
+    expect(result.current.list[0]?.deckIds).toEqual(['latency'])
+  })
+
   it('reset-progress clears card states but not collections', () => {
     const deck = materialise(
       {
