@@ -20,17 +20,23 @@ export function DeckReview() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight">{deck.data.name}</h2>
-          <p className="text-sm text-slate-600 dark:text-slate-400">{deck.data.description}</p>
-        </div>
+      <div className="mb-3 flex items-center justify-between text-sm">
+        <Link
+          to="/"
+          className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+        >
+          ← Home
+        </Link>
         <Link
           to={`/decks/${deck.data.id}/cards`}
-          className="text-sm text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+          className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
         >
           Browse cards →
         </Link>
+      </div>
+      <div className="mb-6">
+        <h2 className="text-2xl font-semibold tracking-tight">{deck.data.name}</h2>
+        <p className="text-sm text-slate-600 dark:text-slate-400">{deck.data.description}</p>
       </div>
       <ReviewSession cards={deck.data.cards} />
     </div>
