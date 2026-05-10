@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
-import { useDeck, useManifest } from './hooks'
+import { resetManifestCache, useDeck, useManifest } from './hooks'
 
 const manifest = {
   decks: [
@@ -31,6 +31,7 @@ function jsonResponse(body: unknown): Response {
 }
 
 beforeEach(() => {
+  resetManifestCache()
   vi.stubGlobal(
     'fetch',
     vi.fn(async (input: RequestInfo | URL): Promise<Response> => {

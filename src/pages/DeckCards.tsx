@@ -3,6 +3,7 @@ import { useDeck } from '../decks/hooks'
 
 export function DeckCards() {
   const { id } = useParams<{ id: string }>()
+  if (!id) throw new Error('DeckCards rendered without :id route param')
   const deck = useDeck(id)
 
   if (deck.status === 'loading') {

@@ -4,6 +4,9 @@ import { ReviewSession } from '../components/ReviewSession'
 
 export function DeckReview() {
   const { id } = useParams<{ id: string }>()
+  // Router pattern guarantees `id` exists, but the typed generic is aspirational —
+  // if the route ever changes, fail loud via the route errorElement, don't spin.
+  if (!id) throw new Error('DeckReview rendered without :id route param')
   const deck = useDeck(id)
 
   if (deck.status === 'loading') {

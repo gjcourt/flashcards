@@ -23,28 +23,26 @@ import type { AppCard } from './types'
 
 type State = {
   cardStates: CardStateMap
-  hydrated: boolean
 }
 
-type Action =
-  | { type: 'HYDRATE'; cardStates: CardStateMap }
-  | { type: 'RATE_CARD'; cardId: string; fsrs: CardFSRSFields }
+type Action = { type: 'RATE_CARD'; cardId: string; fsrs: CardFSRSFields }
 
 function reducer(s: State, a: Action): State {
   switch (a.type) {
-    case 'HYDRATE':
-      return { cardStates: a.cardStates, hydrated: true }
     case 'RATE_CARD':
-      return {
-        ...s,
-        cardStates: { ...s.cardStates, [a.cardId]: a.fsrs },
-      }
-    default: {
-      // Exhaustiveness check — adding a new Action variant without a case fails compile.
-      const _exhaustive: never = a
-      return _exhaustive
-    }
+      return { cardStates: { ...s.cardStates, [a.cardId]: a.fsrs } }
   }
+  // Reachable only if a new Action variant is added without a matching case.
+  // TS doesn't narrow single-variant unions to `never` after switch, so a
+  // runtime assertion is the cheapest backstop until we have ≥2 variants.
+  throw new Error(`Unhandled action: ${JSON.stringify(a)}`)
+}
+
+// Synchronous initial-state computation — reads localStorage during the
+// first reducer init so there is no asynchronous "empty then hydrated"
+// window where a user rating could be clobbered by a late HYDRATE.
+function init(): State {
+  return { cardStates: loadCardStates() }
 }
 
 const StateContext = createContext<{
@@ -53,23 +51,18 @@ const StateContext = createContext<{
 } | null>(null)
 
 export function StateProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, { cardStates: {}, hydrated: false })
+  const [state, dispatch] = useReducer(reducer, undefined, init)
 
-  // Hydrate once on mount.
-  useEffect(() => {
-    dispatch({ type: 'HYDRATE', cardStates: loadCardStates() })
-  }, [])
-
-  // Persist on every change after hydration.
+  // Skip the very first persist — the state we just read in init() doesn't
+  // need to be written back. Subsequent state changes flow to disk normally.
   const skipNextWrite = useRef(true)
   useEffect(() => {
-    if (!state.hydrated) return
     if (skipNextWrite.current) {
       skipNextWrite.current = false
       return
     }
     saveCardStates(state.cardStates)
-  }, [state.cardStates, state.hydrated])
+  }, [state.cardStates])
 
   const value = useMemo(() => ({ state, dispatch }), [state])
   return <StateContext.Provider value={value}>{children}</StateContext.Provider>
@@ -83,10 +76,6 @@ function useStateContext() {
 
 export function useCardStates(): CardStateMap {
   return useStateContext().state.cardStates
-}
-
-export function useHydrated(): boolean {
-  return useStateContext().state.hydrated
 }
 
 export function useRateCard() {
