@@ -1,4 +1,4 @@
-import type { AppCard, Collection, Deck } from './types'
+import type { AppCard, Collection, Deck, ReviewLogEntry } from './types'
 
 export type CardFSRSFields = Omit<
   AppCard,
@@ -9,6 +9,11 @@ export type CardStateMap = Record<string, CardFSRSFields>
 
 const KEY_CARDS = 'flashcards:cards'
 const KEY_COLLECTIONS = 'flashcards:collections'
+const KEY_REVIEWS = 'flashcards:reviews'
+
+// Review log is capped to bound localStorage growth. ~50 reviews/day × 20 days
+// keeps a meaningful streak window without unbounded write cost.
+export const REVIEW_LOG_CAP = 1000
 
 const DATE_KEYS = new Set(['due', 'last_review'])
 
@@ -72,6 +77,23 @@ export function loadCollections(): Collection[] {
 
 export function saveCollections(collections: Collection[]): void {
   write(KEY_COLLECTIONS, collections)
+}
+
+function isReviewLogEntry(v: unknown): v is ReviewLogEntry {
+  if (!v || typeof v !== 'object') return false
+  const r = v as Record<string, unknown>
+  return (
+    typeof r.cardId === 'string' && typeof r.ratedAt === 'number' && typeof r.rating === 'number'
+  )
+}
+
+export function loadReviews(): ReviewLogEntry[] {
+  const raw = read<unknown[]>(KEY_REVIEWS, [], Array.isArray)
+  return raw.filter(isReviewLogEntry)
+}
+
+export function saveReviews(reviews: ReviewLogEntry[]): void {
+  write(KEY_REVIEWS, reviews)
 }
 
 // Extract just the FSRS-related fields from a card.

@@ -1,4 +1,4 @@
-import type { Card as FSRSCard } from 'ts-fsrs'
+import type { Card as FSRSCard, Rating } from 'ts-fsrs'
 
 export type CardContent = {
   id: string
@@ -23,4 +23,10 @@ export type Collection = {
   name: string
   deckIds: string[]
   createdAt: number
+}
+
+export type ReviewLogEntry = {
+  cardId: string
+  ratedAt: number // Unix ms
+  rating: Rating
 }

@@ -2,12 +2,16 @@ import { useEffect, useState } from 'react'
 import { Rating } from 'ts-fsrs'
 import { useCardStates, useRateCard } from '../state'
 import { useDueQueue } from '../queue'
+import { describeRelative, nextDueAt } from '../stats'
 import type { AppCard } from '../types'
 import { CardFlip } from './CardFlip'
+import { StatsPanel } from './StatsPanel'
 
 type Props = {
   cards: AppCard[]
   emptyHint?: string
+  /** When true, hide the StatsPanel above the review (for tight contexts). */
+  hideStats?: boolean
 }
 
 const RATINGS = [
@@ -17,24 +21,49 @@ const RATINGS = [
   { grade: Rating.Easy, label: 'Easy', key: '4', tone: 'bg-sky-600 hover:bg-sky-700' },
 ] as const
 
-export function ReviewSession({ cards, emptyHint }: Props) {
+const ABSOLUTE_TIME = new Intl.DateTimeFormat(undefined, {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+})
+
+export function ReviewSession({ cards, emptyHint, hideStats }: Props) {
   const cardStates = useCardStates()
   const queue = useDueQueue(cards, cardStates)
   const current = queue[0]
+  const now = new Date()
 
   if (!current) {
+    const next = nextDueAt(cards, cardStates, now)
     return (
-      <div className="flex flex-col items-center gap-2 py-12 text-center">
-        <p className="text-2xl font-semibold">All caught up</p>
-        <p className="text-slate-600 dark:text-slate-400">
-          {emptyHint ?? 'No cards due right now. Come back later.'}
-        </p>
+      <div className="space-y-6">
+        {!hideStats && <StatsPanel cards={cards} cardStates={cardStates} dueCount={0} now={now} />}
+        <div className="flex flex-col items-center gap-2 py-8 text-center">
+          <p className="text-2xl font-semibold">All caught up</p>
+          <p className="text-slate-600 dark:text-slate-400">
+            {emptyHint ?? 'No cards due right now.'}
+          </p>
+          {next && (
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-500">
+              Next card due {describeRelative(next, now)} ·{' '}
+              <span className="text-slate-400 dark:text-slate-600">
+                {ABSOLUTE_TIME.format(next)}
+              </span>
+            </p>
+          )}
+        </div>
       </div>
     )
   }
 
   // Keyed by card id so flip state resets cleanly when the card changes.
-  return <ActiveCard key={current.id} card={current} queueLength={queue.length} />
+  return (
+    <div className="space-y-6">
+      {!hideStats && (
+        <StatsPanel cards={cards} cardStates={cardStates} dueCount={queue.length} now={now} />
+      )}
+      <ActiveCard key={current.id} card={current} queueLength={queue.length} />
+    </div>
+  )
 }
 
 function ActiveCard({ card, queueLength }: { card: AppCard; queueLength: number }) {
