@@ -13,12 +13,19 @@ export function Home() {
   if (manifest.status === 'loading' || decks.status === 'loading') {
     return <p className="text-slate-500">Loading…</p>
   }
-  if (manifest.status === 'error' || decks.status === 'error') {
-    const err =
-      manifest.status === 'error'
-        ? manifest.error
-        : (decks as { status: 'error'; error: Error }).error
-    return <p className="text-rose-600 dark:text-rose-400">Failed to load decks: {err.message}</p>
+  if (manifest.status === 'error') {
+    return (
+      <p className="text-rose-600 dark:text-rose-400">
+        Failed to load decks: {manifest.error.message}
+      </p>
+    )
+  }
+  if (decks.status === 'error') {
+    return (
+      <p className="text-rose-600 dark:text-rose-400">
+        Failed to load decks: {decks.error.message}
+      </p>
+    )
   }
 
   const decksById = new Map(decks.data.map((d) => [d.id, d]))

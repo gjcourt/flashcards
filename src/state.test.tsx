@@ -51,6 +51,38 @@ describe('StateProvider', () => {
     expect(result.current[0]?.id).toBe('preexisting')
   })
 
+  it('hydrates cardStates and collections together from localStorage', () => {
+    localStorage.setItem(
+      'flashcards:cards',
+      JSON.stringify({
+        'd:a': {
+          due: '2026-02-01T00:00:00Z',
+          stability: 1,
+          difficulty: 5,
+          elapsed_days: 0,
+          scheduled_days: 1,
+          reps: 1,
+          lapses: 0,
+          state: 1,
+          last_review: '2026-01-01T00:00:00Z',
+        },
+      }),
+    )
+    localStorage.setItem(
+      'flashcards:collections',
+      JSON.stringify([{ id: 'iv', name: 'Interview', deckIds: ['nato'], createdAt: t0.getTime() }]),
+    )
+    const { result } = renderHook(
+      () => ({
+        cards: useCardStates(),
+        collections: useCollections(),
+      }),
+      { wrapper },
+    )
+    expect(Object.keys(result.current.cards)).toEqual(['d:a'])
+    expect(result.current.collections).toHaveLength(1)
+  })
+
   it('persists rate-card mutations to localStorage', () => {
     const deck = materialise(
       {

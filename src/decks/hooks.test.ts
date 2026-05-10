@@ -141,6 +141,14 @@ describe('useDecks', () => {
     expect(result.current.data?.map((d) => d.id)).toEqual(['small', 'tiny'])
   })
 
+  it('returns an empty array when ids is []', async () => {
+    const { result } = renderHook(() => useDecks([]))
+    await waitFor(() => {
+      expect(result.current.status).toBe('ready')
+    })
+    expect(result.current.data).toEqual([])
+  })
+
   it('does not refetch when ids array identity changes but contents do not', async () => {
     const fetchSpy = vi.mocked(globalThis.fetch as never) as ReturnType<typeof vi.fn>
     const { result, rerender } = renderHook(({ ids }: { ids: string[] }) => useDecks(ids), {

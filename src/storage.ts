@@ -61,7 +61,13 @@ export function loadCollections(): Collection[] {
   // Validate the array, then drop any malformed entries rather than failing
   // the entire load — preserves valid user data when one entry has drifted.
   const raw = read<unknown[]>(KEY_COLLECTIONS, [], Array.isArray)
-  return raw.filter(isCollection)
+  const valid = raw.filter(isCollection)
+  if (valid.length < raw.length) {
+    console.warn(
+      `flashcards: dropped ${raw.length - valid.length} malformed collection(s) from localStorage`,
+    )
+  }
+  return valid
 }
 
 export function saveCollections(collections: Collection[]): void {

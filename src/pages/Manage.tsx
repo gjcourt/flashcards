@@ -88,10 +88,12 @@ export function Manage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Interview prep"
+              aria-invalid={idTaken || undefined}
+              aria-describedby={idTaken ? 'collection-id-error' : undefined}
               className="mt-1 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 dark:border-slate-700 dark:bg-slate-900"
             />
             {idTaken && (
-              <p className="mt-1 text-xs text-rose-600 dark:text-rose-400">
+              <p id="collection-id-error" className="mt-1 text-xs text-rose-600 dark:text-rose-400">
                 A collection with id "{nextId}" already exists.
               </p>
             )}
