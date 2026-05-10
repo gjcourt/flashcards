@@ -10,11 +10,18 @@ type Props = {
 // 3D card flip via CSS perspective + transform-style: preserve-3d.
 // The two faces are absolutely stacked; the back is rotated 180° on the Y axis
 // and only visible when the card itself is flipped.
+//
+// Rendered as a <button> for native keyboard support (space/enter) and screen
+// reader interactivity. aria-pressed reflects the flip state.
 export function CardFlip({ flipped, front, back, onClick }: Props) {
   return (
-    <div
-      className="w-full max-w-2xl select-none [perspective:1500px]"
+    <button
+      type="button"
+      aria-pressed={flipped}
+      // Accessible name is derived from the visible face's content, not an
+      // aria-label, so screen-reader users hear the term/definition itself.
       onClick={onClick}
+      className="block w-full max-w-2xl select-none rounded-2xl text-left [perspective:1500px] focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
     >
       <div
         className={`relative h-72 w-full rounded-2xl shadow-lg transition-transform duration-500 [transform-style:preserve-3d] ${
@@ -28,6 +35,6 @@ export function CardFlip({ flipped, front, back, onClick }: Props) {
           {back}
         </div>
       </div>
-    </div>
+    </button>
   )
 }

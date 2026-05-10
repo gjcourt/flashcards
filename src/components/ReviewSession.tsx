@@ -34,13 +34,7 @@ export function ReviewSession({ cards, emptyHint }: Props) {
   }
 
   // Keyed by card id so flip state resets cleanly when the card changes.
-  return (
-    <ActiveCard
-      key={current.id}
-      card={current}
-      queueLength={queue.length}
-    />
-  )
+  return <ActiveCard key={current.id} card={current} queueLength={queue.length} />
 }
 
 function ActiveCard({ card, queueLength }: { card: AppCard; queueLength: number }) {
@@ -50,11 +44,7 @@ function ActiveCard({ card, queueLength }: { card: AppCard; queueLength: number 
   // Keyboard shortcuts: space toggles flip, 1/2/3/4 rates.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement
-      )
-        return
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
       if (e.code === 'Space') {
         e.preventDefault()
         setFlipped((f) => !f)

@@ -10,9 +10,7 @@ export function DeckCards() {
   }
   if (deck.status === 'error') {
     return (
-      <p className="text-rose-600 dark:text-rose-400">
-        Failed to load deck: {deck.error.message}
-      </p>
+      <p className="text-rose-600 dark:text-rose-400">Failed to load deck: {deck.error.message}</p>
     )
   }
 
@@ -20,9 +18,7 @@ export function DeckCards() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight">
-            {deck.data.name} · cards
-          </h2>
+          <h2 className="text-2xl font-semibold tracking-tight">{deck.data.name} · cards</h2>
           <p className="text-sm text-slate-600 dark:text-slate-400">
             {deck.data.cards.length} cards in this deck
           </p>
@@ -51,9 +47,7 @@ export function DeckCards() {
                 <td className="px-4 py-2 text-slate-700 dark:text-slate-300">
                   {card.definition}
                   {card.example && (
-                    <div className="mt-1 text-xs italic text-slate-500">
-                      e.g. {card.example}
-                    </div>
+                    <div className="mt-1 text-xs italic text-slate-500">e.g. {card.example}</div>
                   )}
                 </td>
                 <td className="px-4 py-2 text-slate-500">{card.category}</td>

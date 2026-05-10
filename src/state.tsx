@@ -39,6 +39,11 @@ function reducer(s: State, a: Action): State {
         ...s,
         cardStates: { ...s.cardStates, [a.cardId]: a.fsrs },
       }
+    default: {
+      // Exhaustiveness check — adding a new Action variant without a case fails compile.
+      const _exhaustive: never = a
+      return _exhaustive
+    }
   }
 }
 

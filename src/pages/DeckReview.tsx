@@ -11,9 +11,7 @@ export function DeckReview() {
   }
   if (deck.status === 'error') {
     return (
-      <p className="text-rose-600 dark:text-rose-400">
-        Failed to load deck: {deck.error.message}
-      </p>
+      <p className="text-rose-600 dark:text-rose-400">Failed to load deck: {deck.error.message}</p>
     )
   }
 
@@ -21,12 +19,8 @@ export function DeckReview() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight">
-            {deck.data.name}
-          </h2>
-          <p className="text-sm text-slate-600 dark:text-slate-400">
-            {deck.data.description}
-          </p>
+          <h2 className="text-2xl font-semibold tracking-tight">{deck.data.name}</h2>
+          <p className="text-sm text-slate-600 dark:text-slate-400">{deck.data.description}</p>
         </div>
         <Link
           to={`/decks/${deck.data.id}/cards`}

@@ -18,9 +18,7 @@ export function DeckTile({ entry, deck, dueCount }: Props) {
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <h3 className="text-lg font-semibold">{entry.name}</h3>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-            {entry.description}
-          </p>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{entry.description}</p>
         </div>
         {dueCount !== undefined && dueCount > 0 && (
           <span className="shrink-0 rounded-full bg-rose-100 px-2.5 py-1 text-xs font-medium text-rose-700 dark:bg-rose-950 dark:text-rose-300">

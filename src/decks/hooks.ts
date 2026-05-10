@@ -18,8 +18,7 @@ export function useManifest(): Async<DeckManifest> {
         if (!cancelled) set({ status: 'ready', data, error: null })
       })
       .catch((e: unknown) => {
-        if (!cancelled)
-          set({ status: 'error', data: null, error: e as Error })
+        if (!cancelled) set({ status: 'error', data: null, error: e as Error })
       })
     return () => {
       cancelled = true
@@ -45,8 +44,7 @@ export function useDeck(id: string | undefined): Async<Deck> {
         if (!cancelled) set({ status: 'ready', data, error: null })
       })
       .catch((e: unknown) => {
-        if (!cancelled)
-          set({ status: 'error', data: null, error: e as Error })
+        if (!cancelled) set({ status: 'error', data: null, error: e as Error })
       })
     return () => {
       cancelled = true

@@ -32,11 +32,7 @@ export function Home() {
   }
   if (manifest.status === 'error' || error) {
     const e = manifest.status === 'error' ? manifest.error : error
-    return (
-      <p className="text-rose-600 dark:text-rose-400">
-        Failed to load decks: {e?.message}
-      </p>
-    )
+    return <p className="text-rose-600 dark:text-rose-400">Failed to load decks: {e?.message}</p>
   }
 
   const decksById = new Map(decks!.map((d) => [d.id, d]))
@@ -51,17 +47,8 @@ export function Home() {
       <div className="grid gap-4 sm:grid-cols-2">
         {manifest.data.decks.map((entry) => {
           const deck = decksById.get(entry.id)
-          const dueCount = deck
-            ? buildDueQueue(deck.cards, cardStates, now).length
-            : undefined
-          return (
-            <DeckTile
-              key={entry.id}
-              entry={entry}
-              deck={deck}
-              dueCount={dueCount}
-            />
-          )
+          const dueCount = deck ? buildDueQueue(deck.cards, cardStates, now).length : undefined
+          return <DeckTile key={entry.id} entry={entry} deck={deck} dueCount={dueCount} />
         })}
       </div>
     </section>
