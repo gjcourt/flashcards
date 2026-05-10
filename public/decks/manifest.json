@@ -1,0 +1,28 @@
+{
+  "decks": [
+    {
+      "id": "financial",
+      "name": "Financial Terminology",
+      "description": "Equities, accounting, valuation, and fixed income terms drawn from intro-level finance and CFA Level 1.",
+      "path": "decks/financial.json"
+    },
+    {
+      "id": "nato",
+      "name": "NATO Phonetic Alphabet",
+      "description": "The 26 NATO/ICAO letter codewords used in radio communication.",
+      "path": "decks/nato.json"
+    },
+    {
+      "id": "latency",
+      "name": "System Design Latency Numbers",
+      "description": "Jeff Dean's latency numbers (and a few modern updates) every engineer should know.",
+      "path": "decks/latency.json"
+    },
+    {
+      "id": "acronyms",
+      "name": "Tech Acronyms",
+      "description": "Common acronyms across networking, web, security, data, and infrastructure.",
+      "path": "decks/acronyms.json"
+    }
+  ]
+}

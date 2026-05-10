@@ -1,0 +1,29 @@
+{
+  "id": "latency",
+  "name": "System Design Latency Numbers",
+  "description": "Jeff Dean's latency numbers (with a few modern updates) every engineer should know.",
+  "cards": [
+    { "id": "l1-cache", "term": "L1 cache reference", "definition": "~0.5 ns", "category": "memory", "example": "Roughly 1 CPU cycle on a 2 GHz core." },
+    { "id": "branch-mispredict", "term": "Branch misprediction", "definition": "~5 ns", "category": "cpu", "example": "Pipeline flush; 10× slower than a hit predictor." },
+    { "id": "l2-cache", "term": "L2 cache reference", "definition": "~7 ns", "category": "memory", "example": "About 14× an L1 hit." },
+    { "id": "mutex", "term": "Mutex lock/unlock (uncontended)", "definition": "~25 ns", "category": "cpu", "example": "Atomic compare-and-swap on the futex word." },
+    { "id": "ram", "term": "Main memory reference", "definition": "~100 ns", "category": "memory", "example": "200× slower than L1; the wall most CPU optimisations care about." },
+    { "id": "compress-1kb", "term": "Compress 1 KB with Zippy/Snappy", "definition": "~3 µs", "category": "compute", "example": "30× a memory reference." },
+    { "id": "send-1kb-1gbe", "term": "Send 1 KB over 1 GbE", "definition": "~10 µs", "category": "network", "example": "Wire time only — kernel + driver add more." },
+    { "id": "ssd-random-read", "term": "Read 4 KB random from SSD", "definition": "~150 µs", "category": "storage", "example": "NVMe is closer to 20–50 µs at the low end." },
+    { "id": "memory-1mb-seq", "term": "Read 1 MB sequentially from memory", "definition": "~250 µs", "category": "memory", "example": "Bandwidth-bound at ~4 GB/s on commodity DRAM." },
+    { "id": "datacenter-rtt", "term": "Round trip within the same datacenter", "definition": "~0.5 ms", "category": "network", "example": "Two switch hops + NIC traversal." },
+    { "id": "ssd-1mb-seq", "term": "Read 1 MB sequentially from SSD", "definition": "~1 ms", "category": "storage", "example": "1 GB/s sustained on a SATA SSD; NVMe is 3–5×." },
+    { "id": "hdd-seek", "term": "HDD seek", "definition": "~10 ms", "category": "storage", "example": "Mechanical head movement; the original tax SSDs eliminated." },
+    { "id": "hdd-1mb-seq", "term": "Read 1 MB sequentially from HDD", "definition": "~20 ms", "category": "storage", "example": "~50 MB/s sustained — orders of magnitude slower than SSD." },
+    { "id": "us-eu-rtt", "term": "Round trip US to Europe", "definition": "~150 ms", "category": "network", "example": "Bound by speed of light through fiber across the Atlantic." },
+    { "id": "us-asia-rtt", "term": "Round trip US to Asia", "definition": "~200 ms", "category": "network", "example": "Pacific cable hops add ~50 ms over US↔EU." },
+    { "id": "tcp-handshake", "term": "TCP handshake (3-way)", "definition": "1 RTT", "category": "network", "example": "SYN → SYN/ACK → ACK before data flows." },
+    { "id": "tls13-handshake", "term": "TLS 1.3 handshake", "definition": "1 RTT (0-RTT with resumption)", "category": "network", "example": "Down from 2 RTT in TLS 1.2; 0-RTT is replay-risky." },
+    { "id": "dns-lookup", "term": "DNS lookup (cache miss)", "definition": "20–120 ms", "category": "network", "example": "Cold recursion through TLDs; cached lookups are sub-ms." },
+    { "id": "kafka-produce", "term": "Kafka produce ack", "definition": "1–5 ms", "category": "network", "example": "Within a single broker; replication factor 3 adds proportional latency." },
+    { "id": "redis-get", "term": "Redis GET (same DC)", "definition": "~0.5 ms", "category": "network", "example": "Dominated by network RTT, not Redis itself." },
+    { "id": "postgres-point", "term": "Postgres point query (warm cache)", "definition": "~1 ms", "category": "storage", "example": "Index lookup + page already in shared buffers." },
+    { "id": "s3-get", "term": "S3 GET (small object)", "definition": "20–100 ms", "category": "storage", "example": "First-byte latency; transfer adds bandwidth time." }
+  ]
+}

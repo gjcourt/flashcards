@@ -1,0 +1,33 @@
+{
+  "id": "nato",
+  "name": "NATO Phonetic Alphabet",
+  "description": "The 26 NATO/ICAO letter codewords used in radio communication.",
+  "cards": [
+    { "id": "a", "term": "A", "definition": "Alfa", "category": "letters", "example": "Alfa Lima Papa Hotel Alfa" },
+    { "id": "b", "term": "B", "definition": "Bravo", "category": "letters", "example": "Bravo Romeo Alfa Victor Oscar" },
+    { "id": "c", "term": "C", "definition": "Charlie", "category": "letters", "example": "Charlie Hotel Alfa Romeo Lima India Echo" },
+    { "id": "d", "term": "D", "definition": "Delta", "category": "letters", "example": "Delta Echo Lima Tango Alfa" },
+    { "id": "e", "term": "E", "definition": "Echo", "category": "letters", "example": "Echo Charlie Hotel Oscar" },
+    { "id": "f", "term": "F", "definition": "Foxtrot", "category": "letters", "example": "Foxtrot Oscar X-ray Tango Romeo Oscar Tango" },
+    { "id": "g", "term": "G", "definition": "Golf", "category": "letters", "example": "Golf Oscar Lima Foxtrot" },
+    { "id": "h", "term": "H", "definition": "Hotel", "category": "letters", "example": "Hotel Oscar Tango Echo Lima" },
+    { "id": "i", "term": "I", "definition": "India", "category": "letters", "example": "India November Delta India Alfa" },
+    { "id": "j", "term": "J", "definition": "Juliett", "category": "letters", "example": "Juliett Uniform Lima India Echo Tango Tango" },
+    { "id": "k", "term": "K", "definition": "Kilo", "category": "letters", "example": "Kilo India Lima Oscar" },
+    { "id": "l", "term": "L", "definition": "Lima", "category": "letters", "example": "Lima India Mike Alfa" },
+    { "id": "m", "term": "M", "definition": "Mike", "category": "letters", "example": "Mike India Kilo Echo" },
+    { "id": "n", "term": "N", "definition": "November", "category": "letters", "example": "November Oscar Victor Echo Mike Bravo Echo Romeo" },
+    { "id": "o", "term": "O", "definition": "Oscar", "category": "letters", "example": "Oscar Sierra Charlie Alfa Romeo" },
+    { "id": "p", "term": "P", "definition": "Papa", "category": "letters", "example": "Papa Alfa Papa Alfa" },
+    { "id": "q", "term": "Q", "definition": "Quebec", "category": "letters", "example": "Quebec Uniform Echo Bravo Echo Charlie" },
+    { "id": "r", "term": "R", "definition": "Romeo", "category": "letters", "example": "Romeo Oscar Mike Echo Oscar" },
+    { "id": "s", "term": "S", "definition": "Sierra", "category": "letters", "example": "Sierra India Echo Romeo Romeo Alfa" },
+    { "id": "t", "term": "T", "definition": "Tango", "category": "letters", "example": "Tango Alfa November Golf Oscar" },
+    { "id": "u", "term": "U", "definition": "Uniform", "category": "letters", "example": "Uniform November India Foxtrot Oscar Romeo Mike" },
+    { "id": "v", "term": "V", "definition": "Victor", "category": "letters", "example": "Victor India Charlie Tango Oscar Romeo" },
+    { "id": "w", "term": "W", "definition": "Whiskey", "category": "letters", "example": "Whiskey Hotel India Sierra Kilo Echo Yankee" },
+    { "id": "x", "term": "X", "definition": "X-ray", "category": "letters", "example": "X-ray Romeo Alfa Yankee" },
+    { "id": "y", "term": "Y", "definition": "Yankee", "category": "letters", "example": "Yankee Alfa November Kilo Echo Echo" },
+    { "id": "z", "term": "Z", "definition": "Zulu", "category": "letters", "example": "Zulu Uniform Lima Uniform" }
+  ]
+}
