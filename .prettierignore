@@ -3,3 +3,6 @@ node_modules
 .worktrees
 package-lock.json
 public/decks/*.json
+# The sync service has its own prettier config (server/.prettierrc) and
+# is linted/formatted as a separate CI job.
+server/

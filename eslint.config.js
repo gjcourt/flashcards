@@ -6,7 +6,10 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // server/ is a separate Node package with its own eslint config — it
+  // is linted by the dedicated `server-lint` CI job and is ignored here so
+  // the root (web app) eslint run doesn't trip on Node-only code.
+  globalIgnores(['dist', 'server']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

@@ -1,0 +1,58 @@
+name: Build and publish sync image
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: image-sync-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-push:
+    name: Build and push sync image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute image tag
+        id: meta
+        run: |
+          # Mirror image.yml's tagging: latest + YYYY-MM-DD + YYYY-MM-DD-<sha7>.
+          DATE=$(date -u +%Y-%m-%d)
+          SHA=${GITHUB_SHA::7}
+          REPO_LC=${GITHUB_REPOSITORY,,}
+          # Publish as ghcr.io/gjcourt/flashcards-sync (not just /flashcards).
+          IMAGE=ghcr.io/${REPO_LC}-sync
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+          echo "tag=$DATE" >> "$GITHUB_OUTPUT"
+          echo "sha_tag=$DATE-$SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.sync
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.tag }}
+            ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.sha_tag }}
+            ${{ steps.meta.outputs.image }}:latest
+          cache-from: type=gha,scope=sync
+          cache-to: type=gha,mode=max,scope=sync
+          provenance: false
