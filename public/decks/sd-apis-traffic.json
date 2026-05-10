@@ -1,0 +1,223 @@
+{
+  "id": "sd-apis-traffic",
+  "name": "System Design — APIs, Traffic, Async, Observability",
+  "description": "REST/gRPC, HTTP semantics, rate-limiting algorithms, queues vs streams, delivery guarantees, observability pillars.",
+  "cards": [
+    {
+      "id": "rest-resource-naming",
+      "term": "REST resource naming",
+      "definition": "Use plural nouns for collections (/users, /orders), nest by ownership (/users/42/orders), avoid verbs in paths (use HTTP methods to express the action). Filter via query params (?status=active), not segments.",
+      "category": "rest"
+    },
+    {
+      "id": "http-methods",
+      "term": "HTTP method semantics",
+      "definition": "GET — read, idempotent, cacheable, no body. POST — create, NOT idempotent. PUT — replace whole resource, idempotent. PATCH — partial update, NOT necessarily idempotent. DELETE — remove, idempotent.",
+      "category": "rest"
+    },
+    {
+      "id": "status-2xx",
+      "term": "HTTP 2xx success codes",
+      "definition": "200 OK — generic success with body. 201 Created — new resource (return its location). 202 Accepted — async work queued. 204 No Content — success with empty body (DELETE, PUT without representation).",
+      "category": "rest"
+    },
+    {
+      "id": "status-4xx",
+      "term": "HTTP 4xx client errors",
+      "definition": "400 Bad Request (malformed input). 401 Unauthorized (no/invalid auth). 403 Forbidden (auth ok, denied). 404 Not Found. 409 Conflict (concurrent edit). 422 Unprocessable Entity (validation). 429 Too Many Requests (rate limit).",
+      "category": "rest"
+    },
+    {
+      "id": "status-5xx",
+      "term": "HTTP 5xx server errors",
+      "definition": "500 Internal Server Error (unhandled). 502 Bad Gateway (upstream failed). 503 Service Unavailable (overloaded; retry-after). 504 Gateway Timeout (upstream slow). 5xx are retryable; 4xx mostly aren't.",
+      "category": "rest"
+    },
+    {
+      "id": "grpc-vs-rest",
+      "term": "gRPC vs REST",
+      "definition": "gRPC: HTTP/2 + Protobuf, schema-first via .proto, binary wire, streaming, low overhead. REST: HTTP/1.1+JSON, schema-loose, browser-native, debuggable. Internal RPC: gRPC. Public/browser APIs: REST.",
+      "category": "rpc"
+    },
+    {
+      "id": "grpc-streaming",
+      "term": "gRPC streaming patterns",
+      "definition": "Unary — one req, one resp. Server streaming — one req, stream of resps (e.g. progress updates). Client streaming — stream of reqs, one resp (e.g. file upload). Bidirectional — both stream concurrently (e.g. chat).",
+      "category": "rpc"
+    },
+    {
+      "id": "pagination-cursor",
+      "term": "Cursor pagination",
+      "definition": "Encode the position (e.g. last id + sort key) in an opaque cursor returned with each page. Stable across inserts, no offset cost. Tradeoff: can't skip arbitrary pages. Default for high-scale APIs.",
+      "category": "rest"
+    },
+    {
+      "id": "pagination-offset",
+      "term": "Offset pagination",
+      "definition": "?page=3&size=20. Easy to implement but expensive at scale (DB scans page*size rows) and unstable (inserts shift items). Fine for small/static datasets.",
+      "category": "rest"
+    },
+    {
+      "id": "api-versioning",
+      "term": "API versioning approaches",
+      "definition": "URL path: /v1/users (visible, breaks proxies less). Header: Accept: application/vnd.api.v2+json (cleaner URLs, harder to debug). Pick one and apply consistently. Deprecate via Sunset header + Warning headers.",
+      "category": "rest"
+    },
+    {
+      "id": "idempotency-key-header",
+      "term": "Idempotency-Key header",
+      "definition": "Client passes a unique key with non-idempotent requests (POST /payments). Server stores (key, response) and replays the response on retry. Standard for payment APIs (Stripe, etc.). See `idempotency-impl` in distributed deck.",
+      "category": "rest"
+    },
+    {
+      "id": "token-bucket",
+      "term": "Token bucket rate limiter",
+      "definition": "A bucket of capacity B refills at rate R tokens/sec. Each request consumes 1 token; if empty, reject (or queue). Allows bursts up to B; sustained rate ≤ R. Used by AWS API Gateway, Stripe.",
+      "category": "rate-limiting"
+    },
+    {
+      "id": "leaky-bucket",
+      "term": "Leaky bucket rate limiter",
+      "definition": "Requests enter a fixed-size queue draining at rate R. Smooths traffic to a constant output. Bursts queue up; overflow drops. Best when downstream needs steady load (no bursts).",
+      "category": "rate-limiting"
+    },
+    {
+      "id": "fixed-window-counter",
+      "term": "Fixed window counter",
+      "definition": "Count requests per fixed time window (e.g. per minute). Reset at boundaries. Cheap (single counter). Flaw: 2× burst at boundary (max in last sec of window N + first sec of window N+1).",
+      "category": "rate-limiting"
+    },
+    {
+      "id": "sliding-window-counter",
+      "term": "Sliding window counter",
+      "definition": "Two adjacent fixed windows; current rate = current_count + previous_count × (overlap fraction). Smooths the boundary burst from fixed window. Cheap (two counters). Standard production choice.",
+      "category": "rate-limiting"
+    },
+    {
+      "id": "sliding-window-log",
+      "term": "Sliding window log",
+      "definition": "Store a timestamp per request; count those within the last N seconds. Most accurate. Memory cost grows with QPS — don't use at scale without a sampling/eviction strategy.",
+      "category": "rate-limiting"
+    },
+    {
+      "id": "throttling-vs-rate-limiting",
+      "term": "Throttling vs rate limiting",
+      "definition": "Rate limiting: hard cap, reject when exceeded (return 429). Throttling: slow down to a steady pace (queue/delay), often via leaky bucket. Throttling preserves availability under burst; rate limiting enforces fairness/quotas.",
+      "category": "rate-limiting"
+    },
+    {
+      "id": "backpressure",
+      "term": "Backpressure",
+      "definition": "Downstream signals upstream to slow down when overloaded — instead of accepting more work and dying. Implemented via bounded queues (block/reject on full), TCP windows, or explicit pause/resume signals.",
+      "category": "rate-limiting"
+    },
+    {
+      "id": "load-shedding",
+      "term": "Load shedding",
+      "definition": "Reject lower-priority requests when at capacity to keep critical paths healthy. Better than letting everything degrade. Tier requests by importance; shed bottom tiers first.",
+      "category": "rate-limiting"
+    },
+    {
+      "id": "queue-vs-pubsub",
+      "term": "Message queue vs pub/sub",
+      "definition": "Queue: each message goes to exactly one consumer; deleted after ack. Use for task distribution. Pub/sub: each message goes to all subscribers; retained per consumer. Use for event broadcasting. Kafka does both via consumer groups.",
+      "category": "messaging"
+    },
+    {
+      "id": "kafka-hybrid",
+      "term": "Kafka — queue or pub/sub?",
+      "definition": "Both. A topic is a distributed log; multiple consumer groups can independently read it (pub/sub). Within a group, each partition is assigned to one consumer (queue). This + durability + throughput is why Kafka is the default at scale.",
+      "category": "messaging"
+    },
+    {
+      "id": "fan-out",
+      "term": "Fan-out",
+      "definition": "One event → many consumers (user_signed_up → email + analytics + CRM + onboarding). Hard part: every consumer must process reliably; one slow consumer can't block the rest. Typical impl: SNS→SQS, Kafka multi-consumer-group.",
+      "category": "messaging"
+    },
+    {
+      "id": "fan-in",
+      "term": "Fan-in",
+      "definition": "Many sources → one sink (sensors → telemetry aggregator). Hard part: ordering across producers, deduplication, varying arrival rates. Typical impl: single Kafka topic + partition key + buffered aggregator.",
+      "category": "messaging"
+    },
+    {
+      "id": "at-most-once",
+      "term": "At-most-once delivery",
+      "definition": "Fire-and-forget; messages can be lost but never duplicated. No retries. Use for low-value telemetry where loss is acceptable.",
+      "category": "messaging"
+    },
+    {
+      "id": "at-least-once",
+      "term": "At-least-once delivery",
+      "definition": "Producer retries until ack'd; consumers must be idempotent because duplicates happen. The realistic default for production messaging.",
+      "category": "messaging"
+    },
+    {
+      "id": "exactly-once",
+      "term": "Exactly-once delivery",
+      "definition": "Idempotent producer + transactional commit + coordinated consumer. Kafka supports it via transactions but adds latency and complexity. Most systems achieve effectively-exactly-once via at-least-once + idempotent consumer instead.",
+      "category": "messaging"
+    },
+    {
+      "id": "dead-letter-queue",
+      "term": "Dead-letter queue (DLQ)",
+      "definition": "Messages that fail processing repeatedly (e.g. poison pill, bad data) are routed here after N retries instead of blocking the main queue. Operators triage manually. Without a DLQ, one bad message can stall everything behind it.",
+      "category": "messaging"
+    },
+    {
+      "id": "outbox-pattern",
+      "term": "Outbox pattern",
+      "definition": "Write the business change AND an event row to the same DB transaction (an 'outbox' table). A separate publisher reads the outbox and publishes to the broker. Solves dual-write atomicity (DB + queue) without 2PC.",
+      "category": "messaging"
+    },
+    {
+      "id": "event-sourcing",
+      "term": "Event sourcing",
+      "definition": "Persist every state change as an event; current state is derived by replaying events. Full audit log, time travel, easy event-driven downstream. Tradeoff: replay cost, schema evolution is harder.",
+      "category": "messaging"
+    },
+    {
+      "id": "three-pillars",
+      "term": "Three pillars of observability",
+      "definition": "Metrics — numeric, aggregated, cheap, alertable; tells you THAT something is wrong. Logs — discrete events, full context; tells you WHY for a specific event. Traces — per-request paths through services; tells you WHERE time was spent.",
+      "category": "observability"
+    },
+    {
+      "id": "distributed-tracing",
+      "term": "Distributed tracing",
+      "definition": "A trace ID generated at the entry point propagates through every downstream call (HTTP header / gRPC metadata). Each service emits spans (start/duration/parent span id). Spans assemble into a flame graph in Jaeger/Zipkin/Datadog APM.",
+      "category": "observability"
+    },
+    {
+      "id": "trace-sampling",
+      "term": "Head- vs tail-based sampling",
+      "definition": "Head: decide at trace start (e.g. 1% of requests). Cheap, predictable. Tail: buffer trace, decide after — keep all errors and slow requests. More useful, more expensive. Production usually combines: 1% head + 100% of errors via tail.",
+      "category": "observability"
+    },
+    {
+      "id": "liveness-probe",
+      "term": "Liveness probe",
+      "definition": "'Is this process alive?' Failure → kill + restart container. Used to catch deadlocks/hangs. MUST be lightweight — don't check downstream deps, or every pod restarts when the DB blips. Pairs with readiness, never duplicates it.",
+      "category": "observability"
+    },
+    {
+      "id": "readiness-probe",
+      "term": "Readiness probe",
+      "definition": "'Is this instance ready to serve traffic?' Failure → drain from load balancer (no restart). Used during startup warmup or transient dependency outage. Can check critical deps. Failure should not co-restart the pod.",
+      "category": "observability"
+    },
+    {
+      "id": "sli-slo-sla",
+      "term": "SLI vs SLO vs SLA",
+      "definition": "SLI — the metric (request success rate, p99 latency). SLO — internal target (99.9% of requests <500ms). SLA — contractual external commitment with penalties; usually looser than SLO to keep a buffer.",
+      "category": "observability"
+    },
+    {
+      "id": "error-budget",
+      "term": "Error budget",
+      "definition": "1 − SLO. 99.9% SLO = 0.1% allowed unavailability ≈ 8.7 hours/year. When the budget is full, slow releases and focus on reliability. When healthy, ship riskier changes. Reframes 'reliability vs velocity' as 'how much budget to spend?'.",
+      "category": "observability"
+    }
+  ]
+}
