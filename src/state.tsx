@@ -15,34 +15,51 @@ import { rate } from './fsrs'
 import {
   fsrsOf,
   loadCardStates,
+  loadCollections,
   saveCardStates,
+  saveCollections,
   type CardFSRSFields,
   type CardStateMap,
 } from './storage'
-import type { AppCard } from './types'
+import type { AppCard, Collection } from './types'
 
 type State = {
   cardStates: CardStateMap
+  collections: Collection[]
 }
 
-type Action = { type: 'RATE_CARD'; cardId: string; fsrs: CardFSRSFields }
+type Action =
+  | { type: 'RATE_CARD'; cardId: string; fsrs: CardFSRSFields }
+  | { type: 'ADD_COLLECTION'; collection: Collection }
+  | { type: 'DELETE_COLLECTION'; id: string }
+  | { type: 'RESET_PROGRESS' }
 
 function reducer(s: State, a: Action): State {
   switch (a.type) {
     case 'RATE_CARD':
-      return { cardStates: { ...s.cardStates, [a.cardId]: a.fsrs } }
+      return { ...s, cardStates: { ...s.cardStates, [a.cardId]: a.fsrs } }
+    case 'ADD_COLLECTION':
+      // Replace if the same id already exists; otherwise append.
+      return {
+        ...s,
+        collections: [...s.collections.filter((c) => c.id !== a.collection.id), a.collection],
+      }
+    case 'DELETE_COLLECTION':
+      return { ...s, collections: s.collections.filter((c) => c.id !== a.id) }
+    case 'RESET_PROGRESS':
+      return { ...s, cardStates: {} }
+    default: {
+      const _exhaustive: never = a
+      throw new Error(`Unhandled action: ${JSON.stringify(_exhaustive)}`)
+    }
   }
-  // Reachable only if a new Action variant is added without a matching case.
-  // TS doesn't narrow single-variant unions to `never` after switch, so a
-  // runtime assertion is the cheapest backstop until we have ≥2 variants.
-  throw new Error(`Unhandled action: ${JSON.stringify(a)}`)
 }
 
 // Synchronous initial-state computation — reads localStorage during the
 // first reducer init so there is no asynchronous "empty then hydrated"
-// window where a user rating could be clobbered by a late HYDRATE.
+// window where a user rating could be clobbered by a late hydrate.
 function init(): State {
-  return { cardStates: loadCardStates() }
+  return { cardStates: loadCardStates(), collections: loadCollections() }
 }
 
 const StateContext = createContext<{
@@ -53,16 +70,26 @@ const StateContext = createContext<{
 export function StateProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, init)
 
-  // Skip the very first persist — the state we just read in init() doesn't
-  // need to be written back. Subsequent state changes flow to disk normally.
-  const skipNextWrite = useRef(true)
+  // Skip the very first persist for each slice — the values just read in
+  // init() don't need to be written back. Subsequent changes flow to disk.
+  const skipCardsWrite = useRef(true)
+  const skipCollectionsWrite = useRef(true)
+
   useEffect(() => {
-    if (skipNextWrite.current) {
-      skipNextWrite.current = false
+    if (skipCardsWrite.current) {
+      skipCardsWrite.current = false
       return
     }
     saveCardStates(state.cardStates)
   }, [state.cardStates])
+
+  useEffect(() => {
+    if (skipCollectionsWrite.current) {
+      skipCollectionsWrite.current = false
+      return
+    }
+    saveCollections(state.collections)
+  }, [state.collections])
 
   const value = useMemo(() => ({ state, dispatch }), [state])
   return <StateContext.Provider value={value}>{children}</StateContext.Provider>
@@ -78,6 +105,10 @@ export function useCardStates(): CardStateMap {
   return useStateContext().state.cardStates
 }
 
+export function useCollections(): Collection[] {
+  return useStateContext().state.collections
+}
+
 export function useRateCard() {
   const { dispatch } = useStateContext()
   return useCallback(
@@ -88,4 +119,22 @@ export function useRateCard() {
     },
     [dispatch],
   )
+}
+
+export function useAddCollection() {
+  const { dispatch } = useStateContext()
+  return useCallback(
+    (collection: Collection) => dispatch({ type: 'ADD_COLLECTION', collection }),
+    [dispatch],
+  )
+}
+
+export function useDeleteCollection() {
+  const { dispatch } = useStateContext()
+  return useCallback((id: string) => dispatch({ type: 'DELETE_COLLECTION', id }), [dispatch])
+}
+
+export function useResetProgress() {
+  const { dispatch } = useStateContext()
+  return useCallback(() => dispatch({ type: 'RESET_PROGRESS' }), [dispatch])
 }

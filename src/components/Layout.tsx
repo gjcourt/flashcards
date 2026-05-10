@@ -1,4 +1,4 @@
-import { Link, Outlet } from 'react-router-dom'
+import { Link, NavLink, Outlet } from 'react-router-dom'
 
 export function Layout() {
   return (
@@ -8,6 +8,28 @@ export function Layout() {
           <Link to="/" className="text-lg font-semibold tracking-tight">
             Flashcards
           </Link>
+          <nav className="flex items-center gap-4 text-sm text-slate-600 dark:text-slate-400">
+            <NavLink
+              to="/all"
+              className={({ isActive }) =>
+                isActive
+                  ? 'text-slate-900 dark:text-white'
+                  : 'hover:text-slate-900 dark:hover:text-white'
+              }
+            >
+              Review all
+            </NavLink>
+            <NavLink
+              to="/manage"
+              className={({ isActive }) =>
+                isActive
+                  ? 'text-slate-900 dark:text-white'
+                  : 'hover:text-slate-900 dark:hover:text-white'
+              }
+            >
+              Manage
+            </NavLink>
+          </nav>
         </div>
       </header>
       <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-8">
