@@ -6,7 +6,7 @@
     {
       "id": "day-100k-seconds",
       "term": "Seconds in a day (estimation trick)",
-      "definition": "86,400 — round to **100,000** for back-of-envelope work. Daily volume ÷ 100k ≈ average per-second rate. The single most useful unit-conversion shortcut in an interview.",
+      "definition": "86,400 — round to 100,000 for back-of-envelope work. Daily volume ÷ 100k ≈ average per-second rate. The single most useful unit-conversion shortcut in an interview.",
       "category": "time",
       "example": "1B reads/day ÷ 100k ≈ 10k reads/sec average."
     },
@@ -79,7 +79,7 @@
     {
       "id": "memory-vs-ssd-vs-disk",
       "term": "Memory vs SSD vs disk hierarchy",
-      "definition": "RAM is **1,000×** faster than SSD; SSD is **100×** faster than spinning disk. Local network is **1,000×** faster than cross-region. Always state where the data lives — it dwarfs almost every other latency factor.",
+      "definition": "RAM is ~1,000× faster than SSD; SSD is ~100× faster than spinning disk. Local network is ~1,000× faster than cross-region. Always state where the data lives — it dwarfs almost every other latency factor.",
       "category": "intuition"
     },
     {
@@ -116,7 +116,7 @@
     {
       "id": "bandwidth-conversions",
       "term": "Bandwidth conversions",
-      "definition": "1 KB/s = 86.4 GB/day. 1 MB/s = 86.4 TB/day. 1 GB/s = 86.4 PB/day. Multiply per-second bandwidth by 86.4 for daily; use it the other way to size egress costs.",
+      "definition": "1 KB/s ≈ 86.4 MB/day. 1 MB/s ≈ 86.4 GB/day. 1 GB/s ≈ 86.4 TB/day. Multiply per-second bandwidth by 86.4 for daily; use it the other way to size egress costs.",
       "category": "process"
     },
     {
