@@ -33,6 +33,15 @@ jobs:
       - name: Build (tsc + vite)
         run: npm run build
 
+      # Validate the deploy workflow's locked-build path before merge.
+      # `deploy.yml` only runs after merge to main; this catches BASE_PATH
+      # and VITE_LOCKED_DECK wiring problems on the PR rather than after.
+      - name: Build locked variant (BASE_PATH + VITE_LOCKED_DECK)
+        env:
+          BASE_PATH: /flashcards/nato/
+          VITE_LOCKED_DECK: nato
+        run: npm run build
+
   # ── Test ───────────────────────────────────────────────────────────────────
   test:
     name: Test

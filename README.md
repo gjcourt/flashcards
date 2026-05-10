@@ -5,6 +5,9 @@ state lives in your browser's `localStorage`. Bundled decks cover financial term
 NATO phonetic alphabet, system-design latency numbers, and tech acronyms; you can also
 combine decks into reusable **collections** for focused study.
 
+- **Live (multi-deck):** https://burntbytes.com/flashcards/
+- **Live (NATO-locked):** https://burntbytes.com/flashcards/nato/
+
 Plan: [brainstorm/04-009](https://github.com/gjcourt/brainstorm/blob/main/04-finance-analysis/04-009-financial-terminology-flashcard-app.md)
 
 ## Stack
@@ -133,6 +136,22 @@ boots — there's no async hydration window where new ratings can be clobbered.
 | `2`     | Rate **Hard**  |
 | `3`     | Rate **Good**  |
 | `4`     | Rate **Easy**  |
+
+## Build-time deck lock
+
+Set `VITE_LOCKED_DECK=<deckId>` to produce a focused single-deck build:
+
+- `/` redirects to `/decks/<deckId>`
+- `/manage`, `/collections/*`, `/all` render NotFound
+- The header nav (Review all, Manage) is hidden
+
+```sh
+VITE_LOCKED_DECK=nato BASE_PATH=/flashcards/nato/ npm run build
+```
+
+The deployed [`burntbytes.com/flashcards/nato/`](https://burntbytes.com/flashcards/nato/)
+instance is built this way alongside the main multi-deck build — same code,
+different env vars, both shipped from the same `.github/workflows/deploy.yml`.
 
 ## Architecture
 
