@@ -23,6 +23,11 @@ export type Collection = {
   name: string
   deckIds: string[]
   createdAt: number
+  // Optional sync metadata. Older entries persisted before the sync layer
+  // landed may lack these; consumers must treat them as optional and default
+  // to `createdAt` / `null` respectively.
+  updatedAt?: number
+  deletedAt?: number | null
 }
 
 export type ReviewLogEntry = {

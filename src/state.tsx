@@ -24,6 +24,9 @@ import {
   type CardFSRSFields,
   type CardStateMap,
 } from './storage'
+import { useSync, type SyncStatus } from './state-sync'
+import { reconcile } from './sync/reconcile'
+import type { QueuedMutation, SyncResponse } from './sync/types'
 import type { AppCard, Collection, ReviewLogEntry } from './types'
 
 type State = {
@@ -35,8 +38,9 @@ type State = {
 type Action =
   | { type: 'RATE_CARD'; cardId: string; fsrs: CardFSRSFields; entry: ReviewLogEntry }
   | { type: 'ADD_COLLECTION'; collection: Collection }
-  | { type: 'DELETE_COLLECTION'; id: string }
+  | { type: 'DELETE_COLLECTION'; id: string; deletedAt: number }
   | { type: 'RESET_PROGRESS' }
+  | { type: 'RECONCILE'; response: SyncResponse }
 
 function reducer(s: State, a: Action): State {
   switch (a.type) {
@@ -60,6 +64,17 @@ function reducer(s: State, a: Action): State {
       return { ...s, collections: s.collections.filter((c) => c.id !== a.id) }
     case 'RESET_PROGRESS':
       return { ...s, cardStates: {}, reviews: [] }
+    case 'RECONCILE': {
+      const merged = reconcile(
+        { cardStates: s.cardStates, collections: s.collections, reviews: s.reviews },
+        a.response,
+      )
+      return {
+        cardStates: merged.cardStates,
+        collections: merged.collections,
+        reviews: merged.reviews,
+      }
+    }
     default: {
       const _exhaustive: never = a
       throw new Error(`Unhandled action: ${JSON.stringify(_exhaustive)}`)
@@ -83,7 +98,27 @@ const StateContext = createContext<{
   dispatch: Dispatch<Action>
 } | null>(null)
 
-export function StateProvider({ children }: { children: ReactNode }) {
+const SyncStatusContext = createContext<SyncStatus | null>(null)
+
+type StateProviderProps = {
+  children: ReactNode
+  // Test injection points so the sync layer can be steered without spinning
+  // up real timers or a real fetch. Production callers leave these unset.
+  syncFetch?: typeof fetch
+  syncIntervalMs?: number
+  syncOnMount?: boolean
+  // Set to true (default) to mount the sync layer. Tests for non-sync
+  // behaviour can disable it to keep the surface small.
+  enableSync?: boolean
+}
+
+export function StateProvider({
+  children,
+  syncFetch,
+  syncIntervalMs,
+  syncOnMount,
+  enableSync = true,
+}: StateProviderProps) {
   const [state, dispatch] = useReducer(reducer, undefined, init)
 
   // Skip the very first persist for each slice — the values just read in
@@ -117,13 +152,93 @@ export function StateProvider({ children }: { children: ReactNode }) {
   }, [state.reviews])
 
   const value = useMemo(() => ({ state, dispatch }), [state])
-  return <StateContext.Provider value={value}>{children}</StateContext.Provider>
+
+  return (
+    <StateContext.Provider value={value}>
+      {enableSync ? (
+        <SyncLayer
+          dispatch={dispatch}
+          fetchImpl={syncFetch}
+          intervalMs={syncIntervalMs}
+          syncOnMount={syncOnMount}
+        >
+          {children}
+        </SyncLayer>
+      ) : (
+        <SyncStatusContext.Provider
+          value={{ state: 'offline', lastSyncAt: null, errorMessage: null }}
+        >
+          {children}
+        </SyncStatusContext.Provider>
+      )}
+    </StateContext.Provider>
+  )
+}
+
+// ── Sync wiring ──────────────────────────────────────────────────────────
+// The sync layer is mounted as a child of StateProvider so it has access to
+// the reducer's dispatch. Mutations dispatched through the wrapped dispatch
+// enqueue a mutation envelope; the periodic loop drains it.
+
+const EnqueueContext = createContext<((m: QueuedMutation) => void) | null>(null)
+const ClearQueueContext = createContext<(() => void) | null>(null)
+
+type SyncLayerProps = {
+  dispatch: Dispatch<Action>
+  fetchImpl?: typeof fetch
+  intervalMs?: number
+  syncOnMount?: boolean
+  children: ReactNode
+}
+
+function SyncLayer({ dispatch, fetchImpl, intervalMs, syncOnMount, children }: SyncLayerProps) {
+  const onResponse = useCallback(
+    (response: SyncResponse) => {
+      dispatch({ type: 'RECONCILE', response })
+    },
+    [dispatch],
+  )
+
+  const { enqueue, clearQueue, status } = useSync({
+    onResponse,
+    fetchImpl,
+    intervalMs,
+    syncOnMount,
+  })
+
+  return (
+    <SyncStatusContext.Provider value={status}>
+      <EnqueueContext.Provider value={enqueue}>
+        <ClearQueueContext.Provider value={clearQueue}>{children}</ClearQueueContext.Provider>
+      </EnqueueContext.Provider>
+    </SyncStatusContext.Provider>
+  )
 }
 
 function useStateContext() {
   const ctx = useContext(StateContext)
   if (!ctx) throw new Error('useStateContext must be used inside <StateProvider>')
   return ctx
+}
+
+// Internal helper: returns a no-op when sync is disabled (e.g. in tests).
+function useEnqueue(): (m: QueuedMutation) => void {
+  return useContext(EnqueueContext) ?? noopEnqueue
+}
+
+function useClearQueue(): () => void {
+  return useContext(ClearQueueContext) ?? noopClear
+}
+
+function noopEnqueue() {
+  /* sync disabled */
+}
+function noopClear() {
+  /* sync disabled */
+}
+
+export function useSyncStatus(): SyncStatus {
+  return useContext(SyncStatusContext) ?? { state: 'offline', lastSyncAt: null, errorMessage: null }
 }
 
 export function useCardStates(): CardStateMap {
@@ -140,18 +255,29 @@ export function useReviews(): ReviewLogEntry[] {
 
 export function useRateCard() {
   const { dispatch } = useStateContext()
+  const enqueue = useEnqueue()
   return useCallback(
     (card: AppCard, grade: Grade, now?: Date): AppCard => {
       const { card: next, log } = rate(card, grade, now)
-      dispatch({
-        type: 'RATE_CARD',
+      const fsrs = fsrsOf(next)
+      const entry: ReviewLogEntry = {
         cardId: card.id,
-        fsrs: fsrsOf(next),
-        entry: { cardId: card.id, ratedAt: log.review.getTime(), rating: log.rating },
+        ratedAt: log.review.getTime(),
+        rating: log.rating,
+      }
+      dispatch({ type: 'RATE_CARD', cardId: card.id, fsrs, entry })
+      const enqueuedAt = Date.now()
+      enqueue({ kind: 'cardState', id: card.id, fsrs, enqueuedAt })
+      enqueue({
+        kind: 'review',
+        cardId: entry.cardId,
+        ratedAt: entry.ratedAt,
+        rating: entry.rating,
+        enqueuedAt,
       })
       return next
     },
-    [dispatch],
+    [dispatch, enqueue],
   )
 }
 
@@ -161,18 +287,70 @@ export function useRateCard() {
  */
 export function useAddCollection() {
   const { dispatch } = useStateContext()
+  const enqueue = useEnqueue()
   return useCallback(
-    (collection: Collection) => dispatch({ type: 'ADD_COLLECTION', collection }),
-    [dispatch],
+    (collection: Collection) => {
+      const now = Date.now()
+      // Stamp sync metadata if the caller didn't provide it. Existing call
+      // sites (Manage) pass only `createdAt`; the rest defaults sensibly.
+      const stamped: Collection = {
+        ...collection,
+        updatedAt: collection.updatedAt ?? now,
+        deletedAt: collection.deletedAt ?? null,
+      }
+      dispatch({ type: 'ADD_COLLECTION', collection: stamped })
+      enqueue({
+        kind: 'collection',
+        id: stamped.id,
+        name: stamped.name,
+        deckIds: stamped.deckIds,
+        createdAt: stamped.createdAt,
+        updatedAt: stamped.updatedAt ?? now,
+        deletedAt: stamped.deletedAt ?? null,
+        enqueuedAt: now,
+      })
+    },
+    [dispatch, enqueue],
   )
 }
 
 export function useDeleteCollection() {
-  const { dispatch } = useStateContext()
-  return useCallback((id: string) => dispatch({ type: 'DELETE_COLLECTION', id }), [dispatch])
+  const { state, dispatch } = useStateContext()
+  const enqueue = useEnqueue()
+  return useCallback(
+    (id: string) => {
+      const existing = state.collections.find((c) => c.id === id)
+      const now = Date.now()
+      dispatch({ type: 'DELETE_COLLECTION', id, deletedAt: now })
+      // The server needs the full row metadata for the tombstone — we can
+      // only build it if we know what we're deleting. If the collection has
+      // already been removed locally (double-click), skip the enqueue —
+      // there is no row to tombstone.
+      if (existing) {
+        enqueue({
+          kind: 'collection',
+          id: existing.id,
+          name: existing.name,
+          deckIds: existing.deckIds,
+          createdAt: existing.createdAt,
+          updatedAt: now,
+          deletedAt: now,
+          enqueuedAt: now,
+        })
+      }
+    },
+    [state.collections, dispatch, enqueue],
+  )
 }
 
 export function useResetProgress() {
   const { dispatch } = useStateContext()
-  return useCallback(() => dispatch({ type: 'RESET_PROGRESS' }), [dispatch])
+  const clearQueue = useClearQueue()
+  return useCallback(() => {
+    dispatch({ type: 'RESET_PROGRESS' })
+    // Wipe the pending mutation queue and reset last-sync-at to 0 so the
+    // next sync re-pulls the user's data from a clean slate (or pushes the
+    // emptied state, depending on which side has the newer rows under LWW).
+    clearQueue()
+  }, [dispatch, clearQueue])
 }

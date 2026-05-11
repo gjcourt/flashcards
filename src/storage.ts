@@ -10,6 +10,8 @@ export type CardStateMap = Record<string, CardFSRSFields>
 const KEY_CARDS = 'flashcards:cards'
 const KEY_COLLECTIONS = 'flashcards:collections'
 const KEY_REVIEWS = 'flashcards:reviews'
+const KEY_SYNC_QUEUE = 'flashcards:sync-queue'
+const KEY_LAST_SYNC_AT = 'flashcards:last-sync-at'
 
 // Review log is capped to bound localStorage growth. ~50 reviews/day × 20 days
 // keeps a meaningful streak window without unbounded write cost.
@@ -39,7 +41,14 @@ function read<T>(key: string, fallback: T, validate: (v: unknown) => boolean): T
 
 function write(key: string, value: unknown): void {
   if (typeof localStorage === 'undefined') return
-  localStorage.setItem(key, JSON.stringify(value))
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+  } catch (err) {
+    // Quota exceeded, private mode, etc — log and carry on rather than
+    // crashing the whole app. Callers that strictly need persistence
+    // (sync queue) can fall back to in-memory state.
+    console.warn(`flashcards: localStorage write failed for ${key}:`, err)
+  }
 }
 
 export function loadCardStates(): CardStateMap {
@@ -53,13 +62,22 @@ export function saveCardStates(states: CardStateMap): void {
 function isCollection(v: unknown): v is Collection {
   if (!v || typeof v !== 'object') return false
   const c = v as Record<string, unknown>
-  return (
-    typeof c.id === 'string' &&
-    typeof c.name === 'string' &&
-    Array.isArray(c.deckIds) &&
-    c.deckIds.every((d) => typeof d === 'string') &&
-    typeof c.createdAt === 'number'
-  )
+  if (
+    !(
+      typeof c.id === 'string' &&
+      typeof c.name === 'string' &&
+      Array.isArray(c.deckIds) &&
+      c.deckIds.every((d) => typeof d === 'string') &&
+      typeof c.createdAt === 'number'
+    )
+  ) {
+    return false
+  }
+  // Optional sync metadata. If present, must be of the right type.
+  if (c.updatedAt !== undefined && typeof c.updatedAt !== 'number') return false
+  if (c.deletedAt !== undefined && c.deletedAt !== null && typeof c.deletedAt !== 'number')
+    return false
+  return true
 }
 
 export function loadCollections(): Collection[] {
@@ -121,4 +139,25 @@ export function snapshotCardStates(deck: Deck): CardStateMap {
   const out: CardStateMap = {}
   for (const card of deck.cards) out[card.id] = fsrsOf(card)
   return out
+}
+
+// ── Sync queue + last-sync-at ────────────────────────────────────────────
+// Mutation queue persisted in localStorage. Schema lives in src/sync/types.ts;
+// we keep storage.ts ignorant of the discriminated union and just hand it
+// an `unknown[]`. Validation happens at the boundary in sync/queue.ts.
+
+export function loadQueueRaw(): unknown[] {
+  return read<unknown[]>(KEY_SYNC_QUEUE, [], Array.isArray)
+}
+
+export function saveQueueRaw(queue: readonly unknown[]): void {
+  write(KEY_SYNC_QUEUE, queue)
+}
+
+export function loadLastSyncAt(): number {
+  return read<number>(KEY_LAST_SYNC_AT, 0, (v) => typeof v === 'number' && Number.isFinite(v))
+}
+
+export function saveLastSyncAt(at: number): void {
+  write(KEY_LAST_SYNC_AT, at)
 }
