@@ -180,14 +180,15 @@ function parseCollectionData(raw: unknown): {
  *
  *   1. Apply all mutations in a single transaction, all stamped with the
  *      same `now`.
- *   2. Read back everything updated in (since, now] for this user.
+ *   2. Read back everything updated in `(since, now]` for this user.
  *   3. Return `{ now, cardStates, collections, reviews }`.
  *
- * The read-back window IS inclusive of mutations applied in step 1 (they
- * have `updated_at = now`). The client treats responses idempotently — its
- * own mutations come back as no-ops against local state, so echoing is
- * acceptable. We accept the small bandwidth cost to keep the server
- * stateless about request origin.
+ * Echo behaviour: mutations applied in step 1 have `updated_at = now`. The
+ * strict `>` boundary in `updated_at > since` means that on the *next* sync
+ * (when the client passes `since = previousResponse.now`) those rows are
+ * NOT echoed back — `updated_at == since` fails the filter. The first
+ * (bootstrap) sync with `since = 0` does include them, which is the
+ * correct behaviour for a fresh client picking up its own history.
  */
 export async function handleSync(
   db: Kysely<Database>,
