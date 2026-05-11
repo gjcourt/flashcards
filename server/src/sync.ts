@@ -1,5 +1,4 @@
 import type { Kysely, Transaction } from 'kysely'
-import { sql } from 'kysely'
 import type { Database } from './db.js'
 import type {
   CardStateMutation,
@@ -184,9 +183,11 @@ function parseCollectionData(raw: unknown): {
  *   2. Read back everything updated in (since, now] for this user.
  *   3. Return `{ now, cardStates, collections, reviews }`.
  *
- * Mutations the client just sent are NOT echoed back to it — the response
- * window is `updated_at > since AND updated_at <= now`. The client treats
- * its own mutations as committed once we return 2xx.
+ * The read-back window IS inclusive of mutations applied in step 1 (they
+ * have `updated_at = now`). The client treats responses idempotently — its
+ * own mutations come back as no-ops against local state, so echoing is
+ * acceptable. We accept the small bandwidth cost to keep the server
+ * stateless about request origin.
  */
 export async function handleSync(
   db: Kysely<Database>,
@@ -260,6 +261,3 @@ export async function handleSync(
     reviews,
   }
 }
-
-// Silence unused-import warning under strict bundler configs.
-export const _sqlMarker = sql
