@@ -351,6 +351,14 @@ export function useResetProgress() {
     // Wipe the pending mutation queue and reset last-sync-at to 0 so the
     // next sync re-pulls the user's data from a clean slate (or pushes the
     // emptied state, depending on which side has the newer rows under LWW).
+    //
+    // KNOWN LIMITATION (sync milestone M3): "Reset progress" only clears
+    // LOCAL state. The server still holds the user's card states + reviews,
+    // and the next sync will pull them back. A future milestone needs a
+    // server-side bulk-delete endpoint (or per-row tombstones for card
+    // states) to make reset propagate across devices. Until then this is a
+    // best-effort local wipe — useful for "I'm on a shared device, clear
+    // my browser cache" but NOT for "forget my history everywhere".
     clearQueue()
   }, [dispatch, clearQueue])
 }

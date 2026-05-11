@@ -418,6 +418,79 @@ describe('StateProvider sync integration', () => {
     expect(JSON.parse(localStorage.getItem('flashcards:last-sync-at') ?? '0')).toBe(0)
   })
 
+  it('preserves a mutation enqueued mid-sync (in-flight guard does not drop it)', async () => {
+    const t1 = 1_700_000_000_000
+    // First fetch: a slow, pending Promise we resolve manually mid-test so
+    // the user can rate a card while the request is still in-flight. The
+    // periodic interval then picks up the new entry on the next tick.
+    let resolveFirst!: (res: Response) => void
+    const firstPromise = new Promise<Response>((r) => (resolveFirst = r))
+    let call = 0
+    const seenBodies: { since: number; mutations: { reviews: unknown[] } }[] = []
+    const fetchMock = vi.fn().mockImplementation((_u: string, init?: RequestInit) => {
+      const body = JSON.parse(init?.body as string)
+      seenBodies.push(body)
+      call += 1
+      if (call === 1) return firstPromise
+      const res: SyncResponse = { now: t1 + call, cardStates: [], collections: [], reviews: [] }
+      return Promise.resolve(jsonResponse(res))
+    })
+
+    const deck = materialise(
+      {
+        id: 'd',
+        name: 'D',
+        description: '',
+        cards: [{ id: 'a', term: 'A', definition: 'a', category: 'x' }],
+      },
+      t0,
+    )
+
+    function ShortWrapper({ children }: { children: ReactNode }) {
+      return (
+        <StateProvider
+          syncFetch={fetchMock as unknown as typeof fetch}
+          syncOnMount={true}
+          syncIntervalMs={50}
+        >
+          {children}
+        </StateProvider>
+      )
+    }
+
+    const { result } = renderHook(() => ({ rate: useRateCard(), status: useSyncStatus() }), {
+      wrapper: ShortWrapper,
+    })
+
+    // While the first sync is in-flight, rate a card. This must go into the
+    // queue and survive the upcoming removeSnapshot() of the first sync.
+    act(() => {
+      result.current.rate(deck.cards[0]!, Rating.Good, t0)
+    })
+    // Sanity: queue now has the mutation persisted.
+    expect(
+      JSON.parse(localStorage.getItem('flashcards:sync-queue') ?? '[]').length,
+    ).toBeGreaterThan(0)
+
+    // Now resolve the in-flight first sync (which had an empty snapshot).
+    act(() => {
+      resolveFirst(jsonResponse({ now: t1, cardStates: [], collections: [], reviews: [] }))
+    })
+
+    // Eventually a subsequent sync POSTs the rated card.
+    await waitFor(() => {
+      const withCard = seenBodies.find((b) => b.mutations.reviews.length > 0)
+      expect(withCard).toBeTruthy()
+    })
+
+    // Queue eventually drained.
+    await waitFor(() => {
+      const q = JSON.parse(localStorage.getItem('flashcards:sync-queue') ?? '[]')
+      expect(q).toEqual([])
+    })
+    expect(result.current.status.state).toBe('synced')
+  })
+
   it('reconciles a server-pushed cardState into local state', async () => {
     const t1 = 1_700_000_000_000
     const incoming: SyncResponse = {

@@ -76,8 +76,18 @@ export function reconcileCollections(
   const byId = new Map<string, Collection>(current.map((c) => [c.id, c]))
   for (const row of rows) {
     const existing = byId.get(row.id)
+    // Fall back through updatedAt → createdAt → 0 so legacy entries (persisted
+    // before sync metadata existed) still participate in LWW sensibly.
     const existingUpdated = existing?.updatedAt ?? existing?.createdAt ?? 0
-    // LWW on updatedAt. Deletes with a strictly newer updatedAt always win.
+    // LWW on updatedAt, mirroring server `applyCollection`:
+    //   - non-delete write with stale `updatedAt` (<= existing) → drop
+    //   - any delete (`deletedAt != null`) → apply unconditionally
+    // Note: the server bumps its `updated_at` to max(existing, now) on apply,
+    // so server-pushed rows arrive with a server-fresh `updatedAt`. Local
+    // rows store the user-provided `updatedAt`. The comparison rule is the
+    // same on both sides; the *values* differ in source, but that's fine for
+    // LWW — what matters is monotonicity of stamps that flow through the
+    // server, which is preserved.
     if (existing && row.updatedAt <= existingUpdated && row.deletedAt === null) continue
 
     if (row.deletedAt !== null) {
