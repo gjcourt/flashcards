@@ -78,6 +78,42 @@ describe('syncOnce', () => {
     ).rejects.toThrow(/schema/i)
   })
 
+  it('throws on a 2xx response with malformed row items (per-row validation)', async () => {
+    // Top-level shape is correct, but cardStates contains a row with no `id`.
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        now: 1,
+        cardStates: [{ fsrs: {}, updatedAt: 1 }], // missing id
+        collections: [],
+        reviews: [],
+      }),
+    )
+    await expect(
+      syncOnce(
+        { since: 0, mutations: { cardStates: [], collections: [], reviews: [] } },
+        fetchMock,
+      ),
+    ).rejects.toThrow(/schema/i)
+  })
+
+  it('throws on a 2xx response with malformed collection row', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        now: 1,
+        cardStates: [],
+        // Missing deckIds.
+        collections: [{ id: 'iv', name: 'x', createdAt: 1, updatedAt: 1, deletedAt: null }],
+        reviews: [],
+      }),
+    )
+    await expect(
+      syncOnce(
+        { since: 0, mutations: { cardStates: [], collections: [], reviews: [] } },
+        fetchMock,
+      ),
+    ).rejects.toThrow(/schema/i)
+  })
+
   it('throws on a 2xx response with invalid JSON', async () => {
     const res = new Response('not json{{{', {
       status: 200,

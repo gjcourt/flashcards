@@ -25,15 +25,42 @@ export class ServerError extends Error {
 // fetch().json() is `any` — narrow at the boundary so the rest of the
 // codebase can rely on the SyncResponse shape.
 
-function isFsrsResponse(v: unknown): v is SyncResponse {
+function isCardStateRow(v: unknown): boolean {
+  if (!v || typeof v !== 'object') return false
+  const r = v as Record<string, unknown>
+  return typeof r.id === 'string' && 'fsrs' in r && typeof r.updatedAt === 'number'
+}
+
+function isCollectionRow(v: unknown): boolean {
   if (!v || typeof v !== 'object') return false
   const r = v as Record<string, unknown>
   return (
-    typeof r.now === 'number' &&
-    Array.isArray(r.cardStates) &&
-    Array.isArray(r.collections) &&
-    Array.isArray(r.reviews)
+    typeof r.id === 'string' &&
+    typeof r.name === 'string' &&
+    Array.isArray(r.deckIds) &&
+    r.deckIds.every((d) => typeof d === 'string') &&
+    typeof r.createdAt === 'number' &&
+    typeof r.updatedAt === 'number' &&
+    (r.deletedAt === null || typeof r.deletedAt === 'number')
   )
+}
+
+function isReviewRow(v: unknown): boolean {
+  if (!v || typeof v !== 'object') return false
+  const r = v as Record<string, unknown>
+  return (
+    typeof r.cardId === 'string' && typeof r.ratedAt === 'number' && typeof r.rating === 'number'
+  )
+}
+
+function isFsrsResponse(v: unknown): v is SyncResponse {
+  if (!v || typeof v !== 'object') return false
+  const r = v as Record<string, unknown>
+  if (typeof r.now !== 'number') return false
+  if (!Array.isArray(r.cardStates) || !r.cardStates.every(isCardStateRow)) return false
+  if (!Array.isArray(r.collections) || !r.collections.every(isCollectionRow)) return false
+  if (!Array.isArray(r.reviews) || !r.reviews.every(isReviewRow)) return false
+  return true
 }
 
 // `syncOnce` POSTs the request to /api/sync and returns the parsed response.
