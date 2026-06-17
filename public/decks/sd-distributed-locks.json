@@ -1,0 +1,94 @@
+{
+  "id": "sd-distributed-locks",
+  "name": "System Design — Distributed Lock Service",
+  "description": "Lease-based locking, fencing tokens, Raft, etcd vs Redlock, watch/notify, split-brain, PACELC. Vocabulary and tradeoffs for the distributed-lock-service interview problem.",
+  "cards": [
+    {
+      "id": "lease-basics",
+      "term": "Lease-based lock",
+      "definition": "A lock granted for a bounded time (the lease/TTL). The holder must renew before expiry or the server reclaims it. TTLs are mandatory: without one, a client that crashes mid-hold keeps the lock forever and blocks all other waiters.",
+      "category": "leases",
+      "example": "etcd default lease TTL is configurable; Kubernetes leader-election leases are typically 15s with a 10s renew deadline."
+    },
+    {
+      "id": "lease-client-crash",
+      "term": "What happens on client crash mid-lease",
+      "definition": "The server detects no renewal within the TTL and frees the lock; any waiter (or the next acquirer) can take it. The crashed client may still be alive enough to issue a write — fencing tokens are required to make that write safely rejected downstream.",
+      "category": "leases"
+    },
+    {
+      "id": "fencing-token-def",
+      "term": "Fencing token",
+      "definition": "A monotonically increasing integer issued with every lock grant. The protected resource records the highest token it has seen and rejects any write carrying a smaller one. Turns 'I think I still hold the lock' into a server-side check.",
+      "category": "fencing",
+      "example": "Client A gets token 33, GC-pauses for 20s, lease expires, client B gets token 34 and writes. A wakes up and tries to write with token 33 — storage rejects it."
+    },
+    {
+      "id": "kleppmann-redlock",
+      "term": "Why Redlock alone is unsafe (Kleppmann)",
+      "definition": "Redlock assumes bounded clocks and bounded process pauses. A long GC pause, page fault, or VM stall can make a client think its lease is still valid when the cluster already expired it and granted the lock to someone else. Without a fencing token at the storage layer, both clients can write.",
+      "category": "fencing"
+    },
+    {
+      "id": "fencing-prevents-stale",
+      "term": "How fencing tokens prevent stale-holder writes",
+      "definition": "The storage layer becomes the arbiter, not the lock service. Even if two processes both believe they hold the lock, only one carries the highest token. The storage layer rejects the lower-token write, so divergence is impossible regardless of clock skew or pauses.",
+      "category": "fencing"
+    },
+    {
+      "id": "raft-three-pieces",
+      "term": "Raft — three sub-problems",
+      "definition": "1) Leader election — one leader per term, chosen by majority vote. 2) Log replication — leader appends entries and ships them to followers; commit when a majority ack. 3) Safety — a committed entry is never overwritten; only nodes with all committed entries can be elected leader.",
+      "category": "raft"
+    },
+    {
+      "id": "raft-quorum-odd",
+      "term": "Raft quorum size and odd N",
+      "definition": "Quorum = ⌊N/2⌋ + 1. N=3 tolerates 1 failure, N=5 tolerates 2, N=7 tolerates 3. Even-numbered clusters waste a node: N=4 still only tolerates 1 failure (same as N=3) but needs 3 acks per write. Odd N maximises fault tolerance per node.",
+      "category": "raft"
+    },
+    {
+      "id": "split-brain-raft",
+      "term": "How Raft prevents split-brain",
+      "definition": "Election requires a majority of the cluster to vote for a candidate in a given term. A partition can contain at most one majority, so at most one side elects a leader. The minority side cannot commit writes (can't reach quorum) and steps down.",
+      "category": "split-brain",
+      "example": "5-node cluster splits 3|2 — only the 3-side can elect a leader and commit. The 2-side blocks until the partition heals."
+    },
+    {
+      "id": "etcd-vs-redlock",
+      "term": "etcd vs Redlock — when to use which",
+      "definition": "etcd: CP, Raft-backed, gives you fencing via mod_revision, designed for locks/config/leader-election. Redlock: AP-flavoured, multi-Redis-master, no built-in fencing, much faster but unsafe for correctness-critical mutual exclusion. Pick etcd when correctness matters; Redlock only when 'mostly mutual' is acceptable.",
+      "category": "alternatives"
+    },
+    {
+      "id": "alternatives-oneline",
+      "term": "Lock service alternatives — one-liner each",
+      "definition": "ZooKeeper: ZAB consensus, ephemeral znodes, the classic; ops-heavy. Chubby: Google's internal coarse-grained lock service, the design that inspired ZK/etcd. Consul: Raft + service discovery; reach for it if you already run it. Postgres advisory locks: free if you have Postgres, single-region, no fencing — fine for app-level mutexes, not cluster-wide leadership.",
+      "category": "alternatives"
+    },
+    {
+      "id": "watch-notify",
+      "term": "Watch/notify pattern",
+      "definition": "Clients subscribe to a key (or prefix); the server pushes a notification whenever it changes. Enables config hot-reload, leader-change detection, and waking the next waiter when a lock is released — all without polling. etcd implements this by streaming events keyed by the global monotonic revision, so clients can resume after disconnects without missing updates.",
+      "category": "watch"
+    },
+    {
+      "id": "pacelc-lock-service",
+      "term": "PACELC and where a lock service sits",
+      "definition": "PACELC: if Partitioned, choose Availability or Consistency; Else, choose Latency or Consistency. A correct lock service is PC/EC — it sacrifices availability during a partition (minority side blocks) and sacrifices latency in steady state (every grant costs a quorum RTT) to preserve mutual exclusion.",
+      "category": "tradeoffs"
+    },
+    {
+      "id": "raft-plus-redis-redundant",
+      "term": "Raft + external Redis store is redundant",
+      "definition": "One consensus layer is enough. If your lock service already runs Raft (etcd-style), the Raft log is the source of truth — adding Redis as a second 'lock backend' either creates a weaker AP path that violates the CP guarantees, or duplicates state with no safety gain. Pick one consensus boundary and keep all lock state inside it.",
+      "category": "tradeoffs"
+    },
+    {
+      "id": "lease-ttl-tradeoff",
+      "term": "Lease TTL tradeoff",
+      "definition": "Short TTL (e.g. 5s): fast failover when a holder dies, but more renewal traffic and higher false-expiry risk under load spikes or GC pauses. Long TTL (e.g. 60s): cheap to maintain but slow recovery when the holder vanishes. Combine with fencing tokens so a 'too short' TTL is a liveness issue, not a safety issue.",
+      "category": "leases"
+    }
+  ]
+}
