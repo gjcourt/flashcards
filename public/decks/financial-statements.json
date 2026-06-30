@@ -1,0 +1,265 @@
+{
+  "id": "financial-statements",
+  "name": "Financial Statements & Accounting",
+  "description": "Building the four statements, ratio families + DuPont, working-capital / cash conversion cycle, and 3-statement linkage. Interview-prep fundamentals.",
+  "cards": [
+    {
+      "id": "accrual-basis-vs-cash-basis-when",
+      "term": "Accrual basis vs cash basis — when are revenue & expenses recognized?",
+      "definition": "Accrual: revenue when EARNED, expense when INCURRED — regardless of cash timing. Cash basis: only when cash moves. GAAP uses accrual.",
+      "category": "accounting"
+    },
+    {
+      "id": "what-is-the-matching-principle",
+      "term": "What is the matching principle?",
+      "definition": "Recognize expenses in the SAME period as the revenue they help generate (e.g. COGS hits when the sale happens, not when inventory was bought or paid for).",
+      "category": "accounting"
+    },
+    {
+      "id": "a-sale-or-purchase-on-account",
+      "term": "A sale or purchase \"on account\" creates what?",
+      "definition": "Sale on account → Accounts Receivable (asset). Purchase on account → Accounts Payable (liability). No cash moves yet.",
+      "category": "accounting"
+    },
+    {
+      "id": "what-is-cogs-and-what-is",
+      "term": "What is COGS — and what is NOT in it?",
+      "definition": "Cost of goods SOLD: the cost of inventory actually sold this period. Buying inventory and paying suppliers are separate balance-sheet / cash events, NOT expenses.",
+      "category": "accounting"
+    },
+    {
+      "id": "interest-expense-for-one-year-on",
+      "term": "Interest expense for one year on a \"5-year, $X note at r%\"?",
+      "definition": "r × full outstanding principal X. \"5-year\" = maturity date, NOT \"repay 1/5 of principal each year.\"",
+      "category": "accounting"
+    },
+    {
+      "id": "income-tax-expense-what-s-the",
+      "term": "Income tax expense — what's the base?",
+      "definition": "rate × PRE-TAX income (EBT). Accrued but unpaid → Income Tax Payable (liability).",
+      "category": "accounting"
+    },
+    {
+      "id": "retained-earnings-roll-forward-formula",
+      "term": "Retained earnings roll-forward formula?",
+      "definition": "Ending RE = Beginning RE + Net Income − Dividends.",
+      "category": "accounting"
+    },
+    {
+      "id": "where-do-dividends-hit-the-statements",
+      "term": "Where do dividends hit the statements?",
+      "definition": "Reduce equity (inside Retained Earnings) and show as a financing cash outflow. They are NOT an income-statement expense — they're a distribution of profit.",
+      "category": "accounting"
+    },
+    {
+      "id": "golden-rule-when-the-balance-sheet",
+      "term": "Golden rule when the balance sheet won't balance?",
+      "definition": "Find the real error. NEVER plug Retained Earnings — RE is fixed by the roll-forward, it is not a balancing figure.",
+      "category": "accounting"
+    },
+    {
+      "id": "cfo-indirect-method-starting-point-and",
+      "term": "CFO (indirect method): starting point and adjustments?",
+      "definition": "Start with Net Income; ADD non-cash expenses (depreciation, amortization, losses); SUBTRACT gains; then +/− changes in working capital.",
+      "category": "cash-flow"
+    },
+    {
+      "id": "working-capital-cash-sign-rule",
+      "term": "Working-capital cash-sign rule?",
+      "definition": "Operating ASSET up → cash DOWN (subtract). Operating LIABILITY up → cash UP (add). Asset up = cash parked; liability up = cash held onto.",
+      "category": "cash-flow"
+    },
+    {
+      "id": "cash-actually-paid-to-suppliers-from",
+      "term": "Cash actually paid to suppliers, from accrual COGS?",
+      "definition": "Cash paid = COGS + ΔInventory − ΔAP. (Inventory build consumes cash; AP build conserves it.)",
+      "category": "cash-flow"
+    },
+    {
+      "id": "gain-on-sale-of-an-asset",
+      "term": "Gain on sale of an asset — IS, CFO, and CFI treatment?",
+      "definition": "IS: only the GAIN is recognized. CFO: SUBTRACT the gain (cash isn't there). CFI: FULL proceeds. Rule: in CFO, gains subtract, losses add back.",
+      "category": "cash-flow"
+    },
+    {
+      "id": "the-three-sections-of-the-cash",
+      "term": "The three sections of the cash flow statement?",
+      "definition": "Operating (CFO), Investing (CFI), Financing (CFF). Their sum = change in cash, which ties to the BS cash line.",
+      "category": "cash-flow"
+    },
+    {
+      "id": "current-ratio",
+      "term": "Current ratio?",
+      "definition": "Current Assets / Current Liabilities.",
+      "category": "liquidity"
+    },
+    {
+      "id": "quick-acid-test-ratio",
+      "term": "Quick (acid-test) ratio?",
+      "definition": "(Current Assets − Inventory) / Current Liabilities. Strips the least-liquid current asset (sometimes prepaids too).",
+      "category": "liquidity"
+    },
+    {
+      "id": "what-counts-as-current",
+      "term": "What counts as \"current\"?",
+      "definition": "Due or realizable within ~1 year. A 5-year note's principal is NON-current and is excluded from current liabilities.",
+      "category": "liquidity"
+    },
+    {
+      "id": "gross-margin",
+      "term": "Gross margin?",
+      "definition": "(Revenue − COGS) / Revenue.",
+      "category": "profitability"
+    },
+    {
+      "id": "operating-margin",
+      "term": "Operating margin?",
+      "definition": "Operating Income (EBIT) / Revenue.",
+      "category": "profitability"
+    },
+    {
+      "id": "net-margin",
+      "term": "Net margin?",
+      "definition": "Net Income / Revenue.",
+      "category": "profitability"
+    },
+    {
+      "id": "return-on-assets-roa",
+      "term": "Return on Assets (ROA)?",
+      "definition": "Net Income / Total Assets.",
+      "category": "profitability"
+    },
+    {
+      "id": "return-on-equity-roe",
+      "term": "Return on Equity (ROE)?",
+      "definition": "Net Income / Shareholders' Equity.",
+      "category": "profitability"
+    },
+    {
+      "id": "debt-to-equity",
+      "term": "Debt-to-Equity?",
+      "definition": "Total Liabilities / Shareholders' Equity (or interest-bearing debt / equity — state which version you mean).",
+      "category": "leverage"
+    },
+    {
+      "id": "interest-coverage-ratio",
+      "term": "Interest coverage ratio?",
+      "definition": "EBIT / Interest Expense. How many times operating earnings cover interest.",
+      "category": "leverage"
+    },
+    {
+      "id": "asset-turnover",
+      "term": "Asset turnover?",
+      "definition": "Revenue / Total Assets. Sales generated per $ of assets.",
+      "category": "efficiency"
+    },
+    {
+      "id": "inventory-turnover",
+      "term": "Inventory turnover?",
+      "definition": "COGS / Inventory. Times inventory cycles per year.",
+      "category": "efficiency"
+    },
+    {
+      "id": "receivables-turnover",
+      "term": "Receivables turnover?",
+      "definition": "Revenue / Accounts Receivable.",
+      "category": "efficiency"
+    },
+    {
+      "id": "turnover-vs-return-the-distinction",
+      "term": "Turnover vs return — the distinction?",
+      "definition": "Turnover = sales per $ of asset (activity). Return = profit per $ of asset (profitability). High turnover ≠ high return.",
+      "category": "efficiency"
+    },
+    {
+      "id": "3-step-dupont-decomposition-of-roe",
+      "term": "3-step DuPont decomposition of ROE?",
+      "definition": "ROE = Net Margin × Asset Turnover × Equity Multiplier = (NI/Rev) × (Rev/Assets) × (Assets/Equity).",
+      "category": "dupont"
+    },
+    {
+      "id": "equity-multiplier",
+      "term": "Equity multiplier?",
+      "definition": "Total Assets / Shareholders' Equity — the leverage lever in DuPont.",
+      "category": "dupont"
+    },
+    {
+      "id": "the-three-levers-of-roe",
+      "term": "The three levers of ROE?",
+      "definition": "Profitability (net margin), Efficiency (asset turnover), Leverage (equity multiplier). Leverage amplifies BOTH return and risk.",
+      "category": "dupont"
+    },
+    {
+      "id": "two-roads-to-the-same-roa",
+      "term": "Two roads to the same ROA?",
+      "definition": "Fat margin / slow turnover (luxury goods) vs thin margin / fast turnover (grocery). Margin × turnover can land at the same ROA.",
+      "category": "dupont"
+    },
+    {
+      "id": "dso-days-sales-outstanding",
+      "term": "DSO (Days Sales Outstanding)?",
+      "definition": "AR / Revenue × 365 = 365 / Receivables Turnover. Days to COLLECT from customers.",
+      "category": "working-capital"
+    },
+    {
+      "id": "dio-days-inventory-outstanding",
+      "term": "DIO (Days Inventory Outstanding)?",
+      "definition": "Inventory / COGS × 365 = 365 / Inventory Turnover. Days to SELL inventory.",
+      "category": "working-capital"
+    },
+    {
+      "id": "dpo-days-payables-outstanding",
+      "term": "DPO (Days Payables Outstanding)?",
+      "definition": "AP / COGS × 365. Days to PAY suppliers.",
+      "category": "working-capital"
+    },
+    {
+      "id": "cash-conversion-cycle-ccc",
+      "term": "Cash Conversion Cycle (CCC)?",
+      "definition": "CCC = DIO + DSO − DPO. Tied-up legs (inventory, receivables) add; the supplier-financed leg (payables) subtracts.",
+      "category": "working-capital"
+    },
+    {
+      "id": "what-does-a-negative-cash-conversion",
+      "term": "What does a NEGATIVE cash conversion cycle mean?",
+      "definition": "You collect from customers BEFORE paying suppliers → suppliers finance operations for free → growth self-finances and throws off cash. E.g. Amazon, Dell.",
+      "category": "working-capital"
+    },
+    {
+      "id": "the-two-wires-linking-the-three",
+      "term": "The two \"wires\" linking the three statements?",
+      "definition": "(1) Net Income: bottom of IS → top of CFO AND into Retained Earnings on the BS. (2) Ending Cash: bottom of CFS → Cash line on the BS.",
+      "category": "linkage"
+    },
+    {
+      "id": "depreciation-10-40-tax-rate-income",
+      "term": "Depreciation +$10, 40% tax rate — income-statement effect?",
+      "definition": "Pretax income −$10 → tax −$4 → Net Income −$6.",
+      "category": "linkage"
+    },
+    {
+      "id": "depreciation-10-40-tax-rate-cash",
+      "term": "Depreciation +$10, 40% tax rate — cash-flow effect?",
+      "definition": "CFO: Net Income −$6, add back depreciation +$10 → net cash +$4. Cash rises $4.",
+      "category": "linkage"
+    },
+    {
+      "id": "depreciation-10-40-tax-rate-balance",
+      "term": "Depreciation +$10, 40% tax rate — balance-sheet effect & does it balance?",
+      "definition": "Assets: Cash +$4, PP&E −$10 → assets −$6. Equity: RE −$6 (from NI). It balances: −$6 = −$6.",
+      "category": "linkage"
+    },
+    {
+      "id": "why-does-depreciation-increase-cash-in",
+      "term": "Why does depreciation INCREASE cash in isolation?",
+      "definition": "It's a non-cash expense that lowers taxable income → lower cash taxes. Tax shield = depreciation × tax rate = $10 × 40% = $4.",
+      "category": "linkage"
+    },
+    {
+      "id": "the-three-tie-outs-that-must",
+      "term": "The three tie-outs that must ALWAYS hold?",
+      "definition": "(1) BS balances: Assets = Liabilities + Equity. (2) CFS change in cash = BS cash beginning → ending. (3) RE rolls: beg RE + NI − dividends = end RE.",
+      "category": "linkage"
+    }
+  ]
+}

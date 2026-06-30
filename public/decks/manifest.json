@@ -7,6 +7,12 @@
       "path": "decks/financial.json"
     },
     {
+      "id": "financial-statements",
+      "name": "Financial Statements & Accounting",
+      "description": "The four statements, ratio families + DuPont, working-capital / cash conversion cycle, and 3-statement linkage. Interview-prep fundamentals.",
+      "path": "decks/financial-statements.json"
+    },
+    {
       "id": "nato",
       "name": "NATO Phonetic Alphabet",
       "description": "The 26 NATO/ICAO letter codewords used in radio communication.",
