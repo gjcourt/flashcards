@@ -13,7 +13,7 @@ Access. Image published to `ghcr.io/gjcourt/flashcards`; manifests live in
 [gjcourt/homelab](https://github.com/gjcourt/homelab) under
 `apps/{base,production}/flashcards/`.
 
-Plan: [brainstorm/04-009](https://github.com/gjcourt/brainstorm/blob/main/04-finance-analysis/04-009-financial-terminology-flashcard-app.md)
+Plan: [lab/04-009](https://github.com/gjcourt/lab/blob/main/04-finance-analysis/04-009-financial-terminology-flashcard-app.md)
 
 ## Stack
 
