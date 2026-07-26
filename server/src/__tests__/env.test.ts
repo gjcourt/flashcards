@@ -28,5 +28,20 @@ describe('parseEnv', () => {
   it('accepts AUTH_MODE=jwt', () => {
     const e = parseEnv({ DATABASE_URL: 'x', AUTH_MODE: 'jwt' } as NodeJS.ProcessEnv)
     expect(e.AUTH_MODE).toBe('jwt')
+    // CF_ACCESS_* are optional at parse time; the auth middleware fails closed
+    // at request time when they are unset in jwt mode.
+    expect(e.CF_ACCESS_TEAM_DOMAIN).toBeUndefined()
+    expect(e.CF_ACCESS_AUD).toBeUndefined()
+  })
+
+  it('parses Cloudflare Access config', () => {
+    const e = parseEnv({
+      DATABASE_URL: 'x',
+      AUTH_MODE: 'jwt',
+      CF_ACCESS_TEAM_DOMAIN: 'https://acme.cloudflareaccess.com',
+      CF_ACCESS_AUD: 'aud-tag',
+    } as NodeJS.ProcessEnv)
+    expect(e.CF_ACCESS_TEAM_DOMAIN).toBe('https://acme.cloudflareaccess.com')
+    expect(e.CF_ACCESS_AUD).toBe('aud-tag')
   })
 })
