@@ -158,10 +158,10 @@ The `useSync` hook (`src/state-sync.ts`) drives a loop that runs on mount, every
      `deleted_at`; bumps `updated_at = max(existing, now)` to defend against DB
      clock skew.
    - `applyReview` — idempotent insert, `ON CONFLICT (user_id, card_id, rated_at)
-     DO NOTHING`.
+DO NOTHING`.
 3. It then reads back everything for the user in the window `(since, now]` and
    returns `{ now, cardStates, collections, reviews }`. The strict `>` lower
-   bound means rows just written by *this* request are echoed on a bootstrap
+   bound means rows just written by _this_ request are echoed on a bootstrap
    (`since = 0`) but excluded on subsequent syncs (`since = previous now`).
 
 ## Layering (routes → service → data access; not hexagonal)
@@ -173,19 +173,19 @@ implemented by swappable adapters, so it is not hexagonal.
 **Server (`server/src/`)** — three layers, dependencies point inward-ish but the
 service talks to the query builder directly:
 
-| Layer | Files | Role |
-| --- | --- | --- |
-| HTTP adapter | `app.ts`, `auth.ts` | Hono routes, request validation, auth middleware |
-| Service | `sync.ts` | Merge/LWW logic, transaction orchestration |
-| Data access | `db.ts`, `migrations/` | kysely schema types, connection pool, migration runner |
-| Config / contract | `env.ts`, `schema.ts` | zod-validated env; zod request schema + row types |
-| Composition root | `index.ts` | Wires env → pool → db → app → HTTP server |
+| Layer             | Files                  | Role                                                   |
+| ----------------- | ---------------------- | ------------------------------------------------------ |
+| HTTP adapter      | `app.ts`, `auth.ts`    | Hono routes, request validation, auth middleware       |
+| Service           | `sync.ts`              | Merge/LWW logic, transaction orchestration             |
+| Data access       | `db.ts`, `migrations/` | kysely schema types, connection pool, migration runner |
+| Config / contract | `env.ts`, `schema.ts`  | zod-validated env; zod request schema + row types      |
+| Composition root  | `index.ts`             | Wires env → pool → db → app → HTTP server              |
 
 The service layer (`sync.ts`) imports `Kysely`/`Database` and issues
 `db.selectFrom(...)` / `insertInto(...)` **directly** — there is no repository
 port. That is why the tests swap the **whole** Postgres for `pg-mem`
 (`__tests__/testdb.ts`) rather than substituting a repository adapter. The parts
-that *are* genuinely pure and isolated are the comparison helpers
+that _are_ genuinely pure and isolated are the comparison helpers
 (`extractLastReview`, `incomingCardStateWins`). `createApp` is a pure factory
 (no pool creation, no env read), which is what makes in-memory testing easy.
 
@@ -255,10 +255,10 @@ guard is added** — see the PR description for the rationale.
 
 Two Dockerfiles, two images, published on every push to `main`:
 
-| Image | Dockerfile | CI workflow | Contents |
-| --- | --- | --- | --- |
-| `ghcr.io/gjcourt/flashcards` | `Dockerfile` | `.github/workflows/image.yml` | SPA (multi-deck at `/`, NATO-locked at `/nato/`) on `nginx-unprivileged` |
-| `ghcr.io/gjcourt/flashcards-sync` | `Dockerfile.sync` | `.github/workflows/image-sync.yml` | Node 22 / Hono sync service |
+| Image                             | Dockerfile        | CI workflow                        | Contents                                                                 |
+| --------------------------------- | ----------------- | ---------------------------------- | ------------------------------------------------------------------------ |
+| `ghcr.io/gjcourt/flashcards`      | `Dockerfile`      | `.github/workflows/image.yml`      | SPA (multi-deck at `/`, NATO-locked at `/nato/`) on `nginx-unprivileged` |
+| `ghcr.io/gjcourt/flashcards-sync` | `Dockerfile.sync` | `.github/workflows/image-sync.yml` | Node 22 / Hono sync service                                              |
 
 - **SPA image:** two-stage build produces `dist-multi` (`BASE_PATH=/`) and
   `dist-nato` (`BASE_PATH=/nato/ VITE_LOCKED_DECK=nato`), both copied into one
@@ -277,7 +277,7 @@ Two Dockerfiles, two images, published on every push to `main`:
   `http://localhost:8080` so `npm run dev` works end-to-end.
 - **CI (`.github/workflows/ci.yml`):** on every PR runs build / test / lint /
   format for both the web app and the server (`server-*` jobs, `working-directory:
-  server`), including a locked-variant build to catch `BASE_PATH` wiring problems
+server`), including a locked-variant build to catch `BASE_PATH` wiring problems
   before merge.
 
 ## Where things live
