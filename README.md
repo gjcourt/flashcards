@@ -175,6 +175,9 @@ See `Dockerfile` for the two-stage build.
 
 ## Architecture
 
+For the full picture — component diagram, request/data flows, the sync
+service, layering, and deployment — see [ARCHITECTURE.md](./ARCHITECTURE.md).
+
 ```text
 public/decks/        bundled deck JSON + manifest
 src/
