@@ -1,4 +1,6 @@
 import type { Context, MiddlewareHandler } from 'hono'
+import { getCookie } from 'hono/cookie'
+import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from 'jose'
 import type { Env } from './env.js'
 
 export interface AuthContext {
@@ -18,31 +20,54 @@ export type AuthVariables = {
  *   - `single-user`: Every request is mapped to `SINGLE_USER_ID`.
  *     Intended for solo deployments behind a trusted gateway.
  *
- *   - `jwt`: Reads `CF-Access-Jwt-Assertion` header and extracts the
- *     `email` claim as the user id.
+ *   - `jwt`: Cloudflare Access mode. Reads the CF-Access assertion from the
+ *     `Cf-Access-Jwt-Assertion` header (or the `CF_Authorization` cookie),
+ *     **cryptographically verifies** it against the team's JWKS
+ *     (`<team-domain>/cdn-cgi/access/certs`, RS256, selected by `kid`), and
+ *     validates `iss` (= team domain), `aud` (= app AUD tag) and `exp`/`nbf`
+ *     before trusting the `email` claim as the user id. Any failure → 401.
  *
- *     TODO(security): This first cut **does not verify the JWT signature**.
- *     It assumes Cloudflare Access (or an equivalent gateway) is upstream
- *     and has already validated the token before forwarding the request.
- *     If this service is ever exposed without a verifying gateway in front,
- *     signature verification MUST be added here (fetch the CF Access JWKS
- *     and validate via `jose` or `jsonwebtoken`).
+ *     Requires `CF_ACCESS_TEAM_DOMAIN` and `CF_ACCESS_AUD`. If either is unset
+ *     the middleware **fails closed**: every request is rejected with 401.
  *     See README.md > Auth modes.
  */
 export function authMiddleware(env: Env): MiddlewareHandler<{ Variables: AuthVariables }> {
-  return async (c, next) => {
-    if (env.AUTH_MODE === 'single-user') {
+  if (env.AUTH_MODE === 'single-user') {
+    return async (c, next) => {
       c.set('auth', { userId: env.SINGLE_USER_ID })
       await next()
-      return
     }
+  }
 
-    const header = c.req.header('CF-Access-Jwt-Assertion')
-    if (!header) {
+  // jwt mode. Fail closed when the verifier cannot be configured: without the
+  // team domain and AUD we cannot verify anything, so we must reject rather
+  // than fall back to trusting an unverified token.
+  const teamDomain = env.CF_ACCESS_TEAM_DOMAIN
+  const aud = env.CF_ACCESS_AUD
+  if (!teamDomain || !aud) {
+    console.error(
+      '[auth] AUTH_MODE=jwt but CF_ACCESS_TEAM_DOMAIN and/or CF_ACCESS_AUD are unset; ' +
+        'refusing all requests (fail closed). Set both to enable Cloudflare Access verification.',
+    )
+    return async (c) => c.json({ error: 'auth misconfigured' }, 401)
+  }
+
+  const config: CfAccessConfig = { teamDomain, aud }
+  const keySet = remoteJwks(teamDomain)
+
+  return async (c, next) => {
+    const token = c.req.header('Cf-Access-Jwt-Assertion') ?? getCookie(c, 'CF_Authorization')
+    if (!token) {
       return c.json({ error: 'missing CF-Access-Jwt-Assertion header' }, 401)
     }
 
-    const email = extractEmailUnverified(header)
+    let email: string | null
+    try {
+      email = await verifyCfAccessJwt(token, config, keySet)
+    } catch {
+      return c.json({ error: 'invalid jwt: verification failed' }, 401)
+    }
+
     if (!email) {
       return c.json({ error: 'invalid jwt: cannot extract email claim' }, 401)
     }
@@ -60,30 +85,75 @@ export function getAuth(c: Context<{ Variables: AuthVariables }>): AuthContext {
   return auth
 }
 
+export interface CfAccessConfig {
+  /** Cloudflare Access team domain, e.g. `https://myteam.cloudflareaccess.com`. */
+  teamDomain: string
+  /** Application AUD tag — the expected `aud` claim. */
+  aud: string
+}
+
 /**
- * Decode a JWT payload without verifying the signature.
+ * Normalize a configured team domain to its issuer origin.
  *
- * WARNING: Trust this only when an upstream gateway has already verified
- * the token. See the TODO in `authMiddleware`.
+ * Accepts `myteam.cloudflareaccess.com` or `https://myteam.cloudflareaccess.com`
+ * and returns the origin (`https://myteam.cloudflareaccess.com`), which is the
+ * exact `iss` value Cloudflare Access stamps on every assertion.
  */
-export function extractEmailUnverified(jwt: string): string | null {
-  const parts = jwt.split('.')
-  if (parts.length !== 3) return null
-  const payloadB64 = parts[1]
-  if (!payloadB64) return null
-  try {
-    const json = Buffer.from(payloadB64, 'base64url').toString('utf8')
-    const parsed: unknown = JSON.parse(json)
-    if (
-      typeof parsed === 'object' &&
-      parsed !== null &&
-      'email' in parsed &&
-      typeof (parsed as { email: unknown }).email === 'string'
-    ) {
-      return (parsed as { email: string }).email
-    }
-    return null
-  } catch {
-    return null
+export function cfAccessIssuer(teamDomain: string): string {
+  const url = teamDomain.includes('://') ? new URL(teamDomain) : new URL(`https://${teamDomain}`)
+  return url.origin
+}
+
+/** URL of the team's JWKS endpoint. */
+export function cfAccessCertsUrl(teamDomain: string): URL {
+  return new URL('/cdn-cgi/access/certs', `${cfAccessIssuer(teamDomain)}/`)
+}
+
+// Cache one remote JWKS resolver per certs URL. `createRemoteJWKSet` fetches
+// lazily on first verify and caches keys internally with cooldown/rotation, so
+// this avoids a network round-trip per request.
+const remoteJwksCache = new Map<string, JWTVerifyGetKey>()
+
+function remoteJwks(teamDomain: string): JWTVerifyGetKey {
+  const url = cfAccessCertsUrl(teamDomain)
+  const key = url.toString()
+  let set = remoteJwksCache.get(key)
+  if (!set) {
+    set = createRemoteJWKSet(url)
+    remoteJwksCache.set(key, set)
   }
+  return set
+}
+
+/**
+ * Clear the cached remote JWKS resolvers. Test-only: lets suites that stub the
+ * JWKS fetch with fresh key material avoid picking up a resolver cached by an
+ * earlier test.
+ */
+export function __resetJwksCacheForTests(): void {
+  remoteJwksCache.clear()
+}
+
+/**
+ * Verify a Cloudflare Access assertion and return its `email` claim.
+ *
+ * Enforces RS256 signature (via the supplied JWKS resolver, keyed by `kid`),
+ * `iss` = team domain, `aud` = app AUD tag, and `exp`/`nbf` (handled by
+ * `jwtVerify`). Throws if verification fails. Returns null only when the token
+ * is valid but carries no usable `email` claim.
+ *
+ * The JWKS resolver is injected so tests can supply a local key set and prod
+ * uses the cached remote one.
+ */
+export async function verifyCfAccessJwt(
+  token: string,
+  config: CfAccessConfig,
+  keySet: JWTVerifyGetKey,
+): Promise<string | null> {
+  const { payload } = await jwtVerify(token, keySet, {
+    issuer: cfAccessIssuer(config.teamDomain),
+    audience: config.aud,
+    algorithms: ['RS256'],
+  })
+  return typeof payload.email === 'string' ? payload.email : null
 }

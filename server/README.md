@@ -33,14 +33,16 @@ npm run format:check
 
 ## Environment variables
 
-| Var              | Default       | Notes                            |
-| ---------------- | ------------- | -------------------------------- |
-| `DATABASE_URL`   | (required)    | Postgres connection string       |
-| `AUTH_MODE`      | `single-user` | `single-user` or `jwt`           |
-| `SINGLE_USER_ID` | `local`       | Used in single-user mode         |
-| `PORT`           | `8080`        |                                  |
-| `LOG_LEVEL`      | `info`        | `debug`, `info`, `warn`, `error` |
-| `NODE_ENV`       | `development` | `production` in container        |
+| Var                     | Default       | Notes                                                                               |
+| ----------------------- | ------------- | ----------------------------------------------------------------------------------- |
+| `DATABASE_URL`          | (required)    | Postgres connection string                                                          |
+| `AUTH_MODE`             | `single-user` | `single-user` or `jwt`                                                              |
+| `SINGLE_USER_ID`        | `local`       | Used in single-user mode                                                            |
+| `CF_ACCESS_TEAM_DOMAIN` | (unset)       | **Required in `jwt` mode.** Team domain, e.g. `https://myteam.cloudflareaccess.com` |
+| `CF_ACCESS_AUD`         | (unset)       | **Required in `jwt` mode.** Access application AUD tag (the `aud` claim)            |
+| `PORT`                  | `8080`        |                                                                                     |
+| `LOG_LEVEL`             | `info`        | `debug`, `info`, `warn`, `error`                                                    |
+| `NODE_ENV`              | `development` | `production` in container                                                           |
 
 ## Auth modes
 
@@ -49,17 +51,33 @@ npm run format:check
 Every request is mapped to `SINGLE_USER_ID`. Use this for a single-tenant
 deployment behind a trusted gateway (Cloudflare Access, Tailscale, etc.).
 
-### `jwt`
+### `jwt` (Cloudflare Access)
 
-The service reads the `CF-Access-Jwt-Assertion` header and uses the `email`
+The service reads the CF-Access assertion from the `Cf-Access-Jwt-Assertion`
+header (falling back to the `CF_Authorization` cookie) and uses the `email`
 claim as the user id.
 
-> **Security TODO:** This first cut does **NOT** verify the JWT signature.
-> It assumes Cloudflare Access (or an equivalent verifying gateway) is
-> upstream and has already validated the token before forwarding the
-> request. **If you expose this service without a verifying gateway in
-> front, you MUST add signature verification** — see
-> [`src/auth.ts`](./src/auth.ts) for the exact location.
+The assertion is **cryptographically verified** before it is trusted:
+
+- **Signature** — RS256, verified against the team's JWKS at
+  `<team-domain>/cdn-cgi/access/certs`, selecting the key by `kid`. The JWKS is
+  fetched once and cached (with rotation), not per request.
+- **`iss`** must equal `CF_ACCESS_TEAM_DOMAIN`.
+- **`aud`** must equal `CF_ACCESS_AUD` (the Access application's AUD tag).
+- **`exp` / `nbf`** must be current.
+
+Any failure returns `401`.
+
+**Configuration is mandatory and the middleware fails closed.** If either
+`CF_ACCESS_TEAM_DOMAIN` or `CF_ACCESS_AUD` is unset while `AUTH_MODE=jwt`, every
+request is rejected with `401` (it does **not** silently accept unverified
+tokens). Find both values in the Cloudflare Zero Trust dashboard: the team
+domain under Settings → Custom Pages / team domain, and the AUD tag on the
+Access application's Overview.
+
+> Even with a verifying Cloudflare Access gateway in front, this service now
+> verifies the assertion itself — defense in depth against a
+> misconfigured/removed gateway or direct cluster-internal access.
 
 ## API
 
@@ -130,12 +148,14 @@ window excludes them.
 
 #### Errors
 
-| Status | Body                                                               |
-| ------ | ------------------------------------------------------------------ |
-| 400    | `{ "error": "invalid json" }`                                      |
-| 400    | `{ "error": "invalid request", "details": [...] }`                 |
-| 401    | `{ "error": "missing CF-Access-Jwt-Assertion header" }` (jwt mode) |
-| 500    | `{ "error": "internal error" }`                                    |
+| Status | Body                                                                |
+| ------ | ------------------------------------------------------------------- |
+| 400    | `{ "error": "invalid json" }`                                       |
+| 400    | `{ "error": "invalid request", "details": [...] }`                  |
+| 401    | `{ "error": "missing CF-Access-Jwt-Assertion header" }` (jwt mode)  |
+| 401    | `{ "error": "invalid jwt: verification failed" }` (jwt mode)        |
+| 401    | `{ "error": "auth misconfigured" }` (jwt mode, `CF_ACCESS_*` unset) |
+| 500    | `{ "error": "internal error" }`                                     |
 
 ## Conflict resolution
 
@@ -165,7 +185,8 @@ Applying twice is a no-op.
 1. Bring a Postgres instance and create an empty database. The service
    bootstraps its own schema on first boot.
 2. Set `DATABASE_URL` and either `SINGLE_USER_ID` (for single-tenant) or
-   `AUTH_MODE=jwt` (behind a verifying JWT gateway).
+   `AUTH_MODE=jwt` plus `CF_ACCESS_TEAM_DOMAIN` and `CF_ACCESS_AUD` (Cloudflare
+   Access; the service verifies the assertion itself).
 3. Front it with a TLS-terminating gateway (Cloudflare Access, Caddy,
    Tailscale serve, an Envoy gateway, etc.). The service itself listens
    on plain HTTP `:8080`.
