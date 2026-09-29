@@ -1,9 +1,11 @@
 # Flashcards
 
-A multi-deck spaced-repetition flashcard app. Local-first (no backend) — every card's
-state lives in your browser's `localStorage`. Bundled decks cover financial terminology,
-NATO phonetic alphabet, system-design latency numbers, and tech acronyms; you can also
-combine decks into reusable **collections** for focused study.
+A multi-deck spaced-repetition flashcard app. Local-first — every card's state lives in
+your browser's `localStorage`, and the app is fully functional with no backend at all.
+An optional [sync service](#sync-optional) can carry that state across devices. Bundled
+decks cover financial terminology, NATO phonetic alphabet, system-design latency numbers,
+and tech acronyms; you can also combine decks into reusable **collections** for focused
+study.
 
 - **Live (internal, multi-deck):** https://flashcards.burntbytes.com/
 - **Live (internal, NATO-locked):** https://flashcards.burntbytes.com/nato/
@@ -136,14 +138,37 @@ global uniqueness across decks by prefixing.
 
 ## localStorage layout
 
-| Key                      | Shape                                | Notes                                 |
-| ------------------------ | ------------------------------------ | ------------------------------------- |
-| `flashcards:cards`       | `Record<cardId, FSRSFields>`         | Per-card scheduling state             |
-| `flashcards:collections` | `Collection[]`                       | User-defined deck combos              |
-| `flashcards:reviews`     | `Array<{ cardId, ratedAt, rating }>` | Capped at 1000; powers streak counter |
+| Key                       | Shape                                | Notes                                         |
+| ------------------------- | ------------------------------------ | --------------------------------------------- |
+| `flashcards:cards`        | `Record<cardId, FSRSFields>`         | Per-card scheduling state                     |
+| `flashcards:collections`  | `Collection[]`                       | User-defined deck combos                      |
+| `flashcards:reviews`      | `Array<{ cardId, ratedAt, rating }>` | Capped at 1000; powers streak counter         |
+| `flashcards:sync-queue`   | `QueuedMutation[]`                   | Mutations not yet flushed to the sync service |
+| `flashcards:last-sync-at` | `number` (epoch ms)                  | Cursor sent as `since` on the next sync       |
 
 Card state, collections, and review history all hydrate synchronously when the app
 boots — there's no async hydration window where new ratings can be clobbered.
+
+## Sync (optional)
+
+The SPA never requires a backend, but if one is reachable it uses it: `state-sync.ts`
+pushes the queue and pulls remote changes to `POST /api/sync` on mount, every 60s, and
+on tab focus, then resolves conflicts last-write-wins. The header's status pill
+(`SyncStatus`) reflects the result — synced/syncing/offline/error — and a failed or
+unreachable sync just leaves mutations queued for the next attempt.
+
+In dev, `vite.config.ts` proxies `/api/*` to `SYNC_DEV_TARGET` (default
+`http://localhost:8080`), so running the [sync service](./server/README.md) locally is
+enough to exercise the whole path:
+
+```sh
+cd server && npm install && DATABASE_URL=postgres://postgres:postgres@localhost:5432/flashcards npm run dev
+```
+
+In production the homelab gateway routes `/api/*` to the sync pod; this repo's own
+`nginx.conf` doesn't do that routing. See [server/README.md](./server/README.md) for the
+wire format and conflict-resolution rules, and [ARCHITECTURE.md](./ARCHITECTURE.md) for
+the end-to-end data flow.
 
 ## Keyboard shortcuts (review session)
 
@@ -185,13 +210,21 @@ src/
   queue.ts           buildDueQueue + useDueQueue hook
   stats.ts           streak / mastery breakdown / next-due
   state.tsx          StateProvider + useCardStates / useRateCard / etc.
+  state-sync.ts      useSync hook: push/pull loop, status
   storage.ts         localStorage adapter with date revival
   types.ts           AppCard, Deck, Collection, ReviewLogEntry
   decks/
     load.ts          fetchManifest / fetchDeck / fetchAllDecks
     hooks.ts         useManifest / useDeck / useDecks
-  components/        CardFlip, ReviewSession, DeckTile, Layout, StatsPanel
+  sync/
+    client.ts        fetch wrapper (syncOnce, error taxonomy)
+    queue.ts         enqueue/coalesce/remove for the local mutation queue
+    reconcile.ts     pure LWW merge (mirrors the server for tests)
+    types.ts         wire types, mirrored by hand in server/src/schema.ts
+  components/        CardFlip, ReviewSession, DeckTile, Layout, StatsPanel,
+                     SyncStatus
   pages/             Home, DeckReview, DeckCards, CollectionReview,
                      AllReview, MultiDeckReview, Manage, ErrorPage,
                      NotFound
+server/              optional sync service — see server/README.md
 ```
