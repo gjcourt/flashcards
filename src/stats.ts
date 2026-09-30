@@ -5,8 +5,9 @@ import type { AppCard, ReviewLogEntry } from './types'
 const DAY_MS = 86_400_000
 
 // Stability threshold (in days) above which a card counts as "mastered".
-// FSRS-4.5 default request_retention is 0.9 — at stability=30d, retrievability
-// after 30 days has decayed to ~70%. Anything past that is well-learned.
+// FSRS defines stability as the number of days for retrievability to fall to
+// 90%, so a card at stability=30d is still ~90% recallable 30 days after its
+// last review. Anything past that is well-learned.
 const MASTERED_STABILITY_DAYS = 30
 
 export type Mastery = {
