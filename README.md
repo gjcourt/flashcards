@@ -1,59 +1,36 @@
+<!-- readme-type: service -->
+
 # Flashcards
 
-A multi-deck spaced-repetition flashcard app. Local-first — every card's state lives in
-your browser's `localStorage`, and the app is fully functional with no backend at all.
-An optional [sync service](#sync-optional) can carry that state across devices. Bundled
-decks cover financial terminology, NATO phonetic alphabet, system-design latency numbers,
-and tech acronyms; you can also combine decks into reusable **collections** for focused
-study.
+Local-first spaced-repetition flashcards scheduled with FSRS, with optional cross-device sync
 
-- **Live (internal, multi-deck):** https://flashcards.burntbytes.com/
-- **Live (internal, NATO-locked):** https://flashcards.burntbytes.com/nato/
+Plain flashcard apps either show every card equally often or leave scheduling to the
+user, so you waste time on cards you already know and under-review the ones you're
+about to forget. Flashcards schedules each card with FSRS-4.5, tracking difficulty and
+stability so review timing adapts per card. It ships four bundled decks (financial
+terminology, NATO phonetic alphabet, system-design latency numbers, tech acronyms) and
+lets you combine any of them into custom collections. The app runs entirely in the
+browser against `localStorage`; an optional sync service carries progress across
+devices.
 
-Both served from a single nginx pod in the homelab cluster behind Cloudflare
-Access. Image published to `ghcr.io/gjcourt/flashcards`; manifests live in
-[gjcourt/homelab](https://github.com/gjcourt/homelab) under
-`apps/{base,production}/flashcards/`.
+**Status:** deployed on the homelab at flashcards.burntbytes.com since 2026-05; last
+change 2026-08-11.
 
-Plan: [lab/04-009](https://github.com/gjcourt/lab/blob/main/04-finance-analysis/04-009-financial-terminology-flashcard-app.md)
+## Quick start
 
-## Stack
+Needs: Node 22 (see `.nvmrc`).
 
-- **Build:** Vite + React 19 + TypeScript
-- **Routing:** React Router v7
-- **Scheduling:** [`ts-fsrs`](https://github.com/open-spaced-repetition/ts-fsrs) (FSRS-4.5)
-- **Styling:** Tailwind CSS v4 (dark mode via `prefers-color-scheme`)
-- **Tests:** Vitest + @testing-library/react
-- **State:** `useReducer` + Context
-- **Persistence:** `localStorage`
-
-## Quickstart
-
-```sh
+```bash
+git clone https://github.com/gjcourt/flashcards && cd flashcards
 npm install
-npm run dev          # dev server at http://localhost:5173
-npm test             # run vitest once
-npm run test:watch   # watch mode
-npm run build        # tsc -b + vite build
-npm run lint         # eslint
-npm run format       # prettier --write .
-npm run format:check # prettier --check .
+npm run dev
 ```
 
-### Container
+Then open http://localhost:5173.
 
-`Dockerfile` is a two-stage build that produces both the multi-deck and the
-NATO-locked variants and serves them from `nginx-unprivileged`:
+## Usage
 
-```sh
-docker build -t flashcards:dev .
-docker run --rm -p 8080:8080 flashcards:dev   # http://localhost:8080
-```
-
-CI publishes a date-tagged image to `ghcr.io/gjcourt/flashcards` on every
-push to `main` (see `.github/workflows/image.yml`).
-
-## Routes
+Review a deck from the home page, or jump straight to a route:
 
 | Path               | What                                                          |
 | ------------------ | ------------------------------------------------------------- |
@@ -64,167 +41,96 @@ push to `main` (see `.github/workflows/image.yml`).
 | `/all`             | Pseudo-collection: review across every bundled deck           |
 | `/manage`          | Create/delete collections; reset all FSRS progress            |
 
-## How FSRS works (tl;dr)
+During a review, `Space` flips the card and `1`–`4` rate it **Again** / **Hard** /
+**Good** / **Easy**.
 
-The Free Spaced Repetition Scheduler tracks three numbers per card:
-
-- **Difficulty (D)** — how hard you find the card (1–10).
-- **Stability (S)** — how many days the card "lasts" before recall drops below the
-  retention target.
-- **Retrievability (R)** — probability you'd recall the card right now, given how long
-  ago you last saw it. Decays as `R(t) = (1 + 19/81 * t/S)^-0.5`.
-
-When you rate a card **Again / Hard / Good / Easy**, FSRS updates D and S and computes
-the next due date such that R is expected to be ≈ 0.9 at that moment. Rating **Again**
-also resets stability and increments lapses.
-
-Mastery thresholds in the stats panel:
-
-- **New** — never reviewed.
-- **Learning** — initial steps (a few minutes/days apart) until first promotion.
-- **Review** — settled into the spaced schedule.
-- **Mastered** — stability ≥ 30 days (the card is unlikely to need a review for a month
-  or more).
-
-## Deck JSON format
-
-Decks live in `public/decks/<id>.json` and are listed in `public/decks/manifest.json`.
-Each deck file looks like:
+Add a deck by dropping a JSON file under `public/decks/` and listing it in the
+manifest (`src/decks/load.ts` validates `id`/`term`/`definition`/`category` as
+required and `example` as optional):
 
 ```json
 {
-  "id": "nato",
-  "name": "NATO Phonetic Alphabet",
-  "description": "26 letter codewords used in radio communication.",
-  "cards": [
-    {
-      "id": "a",
-      "term": "A",
-      "definition": "Alfa",
-      "category": "letters",
-      "example": "Alfa Lima Papa Hotel Alfa"
-    }
-  ]
+  "id": "your-deck-id",
+  "name": "Display Name",
+  "description": "One-line description.",
+  "path": "decks/your-deck-id.json"
 }
 ```
 
-Card fields:
+Run the optional sync service locally to exercise cross-device sync end to end
+(`vite.config.ts` proxies `/api/*` to it):
 
-| Field        | Required | Notes                                                      |
-| ------------ | -------- | ---------------------------------------------------------- |
-| `id`         | ✅       | Short slug; loader prefixes it with the deck id (`nato:a`) |
-| `term`       | ✅       | Front of the card                                          |
-| `definition` | ✅       | Back of the card                                           |
-| `category`   | ✅       | Free-form badge text                                       |
-| `example`    | ➖       | Optional usage example shown under the definition          |
-
-The deck loader (`src/decks/load.ts`) validates each field via type predicates before
-materialising. Card ids must be globally unique within a deck; the loader guarantees
-global uniqueness across decks by prefixing.
-
-### Adding a new deck
-
-1. Create `public/decks/<your-deck-id>.json` matching the shape above.
-2. Append an entry to `public/decks/manifest.json`:
-   ```json
-   {
-     "id": "<your-deck-id>",
-     "name": "Display Name",
-     "description": "One-line description.",
-     "path": "decks/<your-deck-id>.json"
-   }
-   ```
-3. Refresh the app — the new deck appears on the home page automatically.
-
-## localStorage layout
-
-| Key                       | Shape                                | Notes                                         |
-| ------------------------- | ------------------------------------ | --------------------------------------------- |
-| `flashcards:cards`        | `Record<cardId, FSRSFields>`         | Per-card scheduling state                     |
-| `flashcards:collections`  | `Collection[]`                       | User-defined deck combos                      |
-| `flashcards:reviews`      | `Array<{ cardId, ratedAt, rating }>` | Capped at 1000; powers streak counter         |
-| `flashcards:sync-queue`   | `QueuedMutation[]`                   | Mutations not yet flushed to the sync service |
-| `flashcards:last-sync-at` | `number` (epoch ms)                  | Cursor sent as `since` on the next sync       |
-
-Card state, collections, and review history all hydrate synchronously when the app
-boots — there's no async hydration window where new ratings can be clobbered.
-
-## Sync (optional)
-
-The SPA never requires a backend, but if one is reachable it uses it: `state-sync.ts`
-pushes the queue and pulls remote changes to `POST /api/sync` on mount, every 60s, and
-on tab focus, then resolves conflicts last-write-wins. The header's status pill
-(`SyncStatus`) reflects the result — synced/syncing/offline/error — and a failed or
-unreachable sync just leaves mutations queued for the next attempt.
-
-In dev, `vite.config.ts` proxies `/api/*` to `SYNC_DEV_TARGET` (default
-`http://localhost:8080`), so running the [sync service](./server/README.md) locally is
-enough to exercise the whole path:
-
-```sh
-cd server && npm install && DATABASE_URL=postgres://postgres:postgres@localhost:5432/flashcards npm run dev
+```bash
+cd server
+npm install
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/flashcards npm run dev
 ```
 
-In production the homelab gateway routes `/api/*` to the sync pod; this repo's own
-`nginx.conf` doesn't do that routing. See [server/README.md](./server/README.md) for the
-wire format and conflict-resolution rules, and [ARCHITECTURE.md](./ARCHITECTURE.md) for
-the end-to-end data flow.
+## Configuration
 
-## Keyboard shortcuts (review session)
+| Variable           | Default                 | Meaning                                                                                               |
+| ------------------ | ----------------------- | ----------------------------------------------------------------------------------------------------- |
+| `VITE_LOCKED_DECK` | (unset)                 | Build-time: lock the SPA to one deck id (e.g. `nato`); `/manage`, `/collections/*`, `/all` become 404 |
+| `BASE_PATH`        | `/`                     | Build-time: Vite base path for the locked build (e.g. `/nato/`)                                       |
+| `SYNC_DEV_TARGET`  | `http://localhost:8080` | Dev-only: where `vite.config.ts` proxies `/api/*`                                                     |
 
-| Key     | Action         |
-| ------- | -------------- |
-| `Space` | Flip the card  |
-| `1`     | Rate **Again** |
-| `2`     | Rate **Hard**  |
-| `3`     | Rate **Good**  |
-| `4`     | Rate **Easy**  |
+The sync service's own variables (`DATABASE_URL`, `AUTH_MODE`, `CF_ACCESS_*`, ...) are
+documented in [server/README.md](server/README.md).
 
-## Build-time deck lock
+## How it works
 
-Set `VITE_LOCKED_DECK=<deckId>` to produce a focused single-deck build:
+The scheduler is [FSRS-4.5](https://github.com/open-spaced-repetition/ts-fsrs): each
+card carries a difficulty and stability, and every rating (**Again** / **Hard** /
+**Good** / **Easy**) recomputes them and the next due date so recall probability is
+≈0.9 when the card is next shown. Card state, collections, and review history hydrate
+synchronously from `localStorage` at boot — there's no async window where a fresh
+rating can be clobbered — and the optional sync service (`server/`, Hono + Postgres)
+overlays cross-device state on top via last-write-wins merges. See
+[ARCHITECTURE.md](ARCHITECTURE.md) for the component diagram, request/data flows, and
+design decisions.
 
-- `/` redirects to `/decks/<deckId>`
-- `/manage`, `/collections/*`, `/all` render NotFound
-- The header nav (Review all, Manage) is hidden
+## Development
 
-```sh
-VITE_LOCKED_DECK=nato BASE_PATH=/nato/ npm run build
+```bash
+npm ci
+npm run build          # tsc -b && vite build
+npm test                # vitest run
+npm run lint             # eslint .
+npm run format:check     # prettier --check .
 ```
 
-The container image bakes both variants — multi-deck at `/` and NATO-locked
-at `/nato/` — so a single nginx pod serves
-[`flashcards.burntbytes.com/`](https://flashcards.burntbytes.com/) and
-[`flashcards.burntbytes.com/nato/`](https://flashcards.burntbytes.com/nato/).
-See `Dockerfile` for the two-stage build.
+CI also builds the locked variant to catch `BASE_PATH`/`VITE_LOCKED_DECK` wiring
+problems before merge:
 
-## Architecture
-
-For the full picture — component diagram, request/data flows, the sync
-service, layering, and deployment — see [ARCHITECTURE.md](./ARCHITECTURE.md).
-
-```text
-public/decks/        bundled deck JSON + manifest
-src/
-  fsrs.ts            ts-fsrs wrapper: newCard / rate / retrievability
-  queue.ts           buildDueQueue + useDueQueue hook
-  stats.ts           streak / mastery breakdown / next-due
-  state.tsx          StateProvider + useCardStates / useRateCard / etc.
-  state-sync.ts      useSync hook: push/pull loop, status
-  storage.ts         localStorage adapter with date revival
-  types.ts           AppCard, Deck, Collection, ReviewLogEntry
-  decks/
-    load.ts          fetchManifest / fetchDeck / fetchAllDecks
-    hooks.ts         useManifest / useDeck / useDecks
-  sync/
-    client.ts        fetch wrapper (syncOnce, error taxonomy)
-    queue.ts         enqueue/coalesce/remove for the local mutation queue
-    reconcile.ts     pure LWW merge (mirrors the server for tests)
-    types.ts         wire types, mirrored by hand in server/src/schema.ts
-  components/        CardFlip, ReviewSession, DeckTile, Layout, StatsPanel,
-                     SyncStatus
-  pages/             Home, DeckReview, DeckCards, CollectionReview,
-                     AllReview, MultiDeckReview, Manage, ErrorPage,
-                     NotFound
-server/              optional sync service — see server/README.md
+```bash
+BASE_PATH=/nato/ VITE_LOCKED_DECK=nato npm run build
 ```
+
+The sync service has its own checks, run from `server/`:
+
+```bash
+cd server
+npm ci
+npm run build
+npm test
+npm run lint
+npm run format:check
+```
+
+Conventions for contributors and agents: [AGENTS.md](AGENTS.md).
+
+## Deployment
+
+Runs on the homelab behind Cloudflare Access: the SPA at
+[flashcards.burntbytes.com](https://flashcards.burntbytes.com/) (and the NATO-locked
+build at `/nato/`), with the sync service handling `/api/*`. CI publishes
+`ghcr.io/gjcourt/flashcards` and `ghcr.io/gjcourt/flashcards-sync` on every push to
+`main`; manifests live in [gjcourt/homelab](https://github.com/gjcourt/homelab) under
+`apps/{base,production,staging}/flashcards{,-sync}/` — see the
+[flashcards runbook](https://github.com/gjcourt/homelab/blob/master/docs/operations/apps/flashcards.md)
+and the
+[flashcards-sync runbook](https://github.com/gjcourt/homelab/blob/master/docs/operations/apps/flashcards-sync.md).
+
+## License
+
+No licence file yet.
