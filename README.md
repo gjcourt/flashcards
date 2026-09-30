@@ -6,10 +6,10 @@ Local-first spaced-repetition flashcards scheduled with FSRS, with optional cros
 
 Plain flashcard apps either show every card equally often or leave scheduling to the
 user, so you waste time on cards you already know and under-review the ones you're
-about to forget. Flashcards schedules each card with FSRS-4.5, tracking difficulty and
-stability so review timing adapts per card. It ships four bundled decks (financial
-terminology, NATO phonetic alphabet, system-design latency numbers, tech acronyms) and
-lets you combine any of them into custom collections. The app runs entirely in the
+about to forget. Flashcards schedules each card with FSRS, tracking difficulty and
+stability so review timing adapts per card. It ships eleven bundled decks (finance and
+accounting, NATO phonetic alphabet, tech acronyms, and seven system-design decks
+including latency numbers) and lets you combine any of them into custom collections. The app runs entirely in the
 browser against `localStorage`; an optional sync service carries progress across
 devices.
 
@@ -79,7 +79,8 @@ documented in [server/README.md](server/README.md).
 
 ## How it works
 
-The scheduler is [FSRS-4.5](https://github.com/open-spaced-repetition/ts-fsrs): each
+The scheduler is FSRS via [ts-fsrs](https://github.com/open-spaced-repetition/ts-fsrs)
+5.x (which implements FSRS-6) with its default parameters: each
 card carries a difficulty and stability, and every rating (**Again** / **Hard** /
 **Good** / **Easy**) recomputes them and the next due date so recall probability is
 ≈0.9 when the card is next shown. Card state, collections, and review history hydrate
@@ -99,8 +100,9 @@ npm run lint             # eslint .
 npm run format:check     # prettier --check .
 ```
 
-CI also builds the locked variant to catch `BASE_PATH`/`VITE_LOCKED_DECK` wiring
-problems before merge:
+CI also builds the locked variant (with `BASE_PATH=/flashcards/nato/`) to catch
+`BASE_PATH`/`VITE_LOCKED_DECK` wiring problems before merge; the Docker image builds it
+at `/nato/`:
 
 ```bash
 BASE_PATH=/nato/ VITE_LOCKED_DECK=nato npm run build
