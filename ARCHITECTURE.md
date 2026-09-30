@@ -18,8 +18,9 @@ The app drills a user on bundled decks (financial terminology, NATO phonetic
 alphabet, system-design latency numbers, tech acronyms) and on user-defined
 **collections** that merge several decks into one due queue.
 
-Scheduling is **FSRS-6** (Free Spaced Repetition Scheduler, as implemented by `ts-fsrs` 5.x), not SM-2, via the
-[`ts-fsrs`](https://github.com/open-spaced-repetition/ts-fsrs) library. Each card
+Scheduling is **FSRS-6** (Free Spaced Repetition Scheduler), not SM-2, via the
+[`ts-fsrs`](https://github.com/open-spaced-repetition/ts-fsrs) library (5.x,
+which implements FSRS-6 with its default 21-parameter weights). Each card
 carries FSRS state — difficulty (D), stability (S), and a derived retrievability
 (R) — and every rating (`Again` / `Hard` / `Good` / `Easy`) advances that state
 and computes the next due date targeting ≈0.9 recall probability. The FSRS math
